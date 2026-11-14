@@ -1,0 +1,127 @@
+[replay as_of 2025-05-01] new signals:  2  max severity: info
+[replay as_of 2025-05-08] new signals:  1  max severity: info
+[replay as_of 2025-05-15] new signals:  0  max severity: info
+[replay as_of 2025-05-22] new signals:  1  max severity: info
+[replay as_of 2025-05-29] new signals:  0  max severity: info
+[replay as_of 2025-06-05] new signals:  5  max severity: info
+[replay as_of 2025-06-12] new signals:  6  max severity: info
+[replay as_of 2025-06-19] new signals:  6  max severity: info
+[replay as_of 2025-06-26] new signals:  0  max severity: info
+[replay as_of 2025-07-03] new signals:  1  max severity: info
+[replay as_of 2025-07-10] new signals:  0  max severity: info
+[replay as_of 2025-07-17] new signals:  2  max severity: info
+[replay as_of 2025-07-24] new signals:  1  max severity: info
+[replay as_of 2025-07-31] new signals:  1  max severity: elevated
+      2025-07-26 [elevated] r/EconomyCharts on Reddit: US auto loan delinquency rates keep ... (reddit.com)
+[replay as_of 2025-08-07] new signals:  0  max severity: info
+[replay as_of 2025-08-14] new signals:  0  max severity: info
+[replay as_of 2025-08-21] new signals:  4  max severity: info
+[replay as_of 2025-08-28] new signals:  2  max severity: info
+[replay as_of 2025-08-29] new signals:  0  max severity: info
+[replay as_of 2025-08-30] new signals:  0  max severity: info
+[replay as_of 2025-08-31] new signals:  0  max severity: info
+[replay as_of 2025-09-01] new signals:  1  max severity: info
+[replay as_of 2025-09-02] new signals:  0  max severity: info
+[replay as_of 2025-09-03] new signals:  0  max severity: info
+[replay as_of 2025-09-04] new signals:  0  max severity: info
+[replay as_of 2025-09-05] new signals:  0  max severity: info
+[replay as_of 2025-09-06] new signals:  3  max severity: CRITICAL <-- ALERT
+      2025-09-06 [CRITICAL] Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Directory 3 (newsdirectory3.com)
+      2025-09-06 [CRITICAL] Tricolor Auto Takeover: Texas Banks Seize Dealership – Latest ... (memesita.com)
+      2025-09-06 [high] Car Dealership Guy (@GuyDealership) on X (x.com)
+[replay as_of 2025-09-07] new signals:  1  max severity: high <-- ALERT
+      2025-09-07 [high] obnk-20250907 (sec.gov)
+[replay as_of 2025-09-08] new signals:  2  max severity: high <-- ALERT
+      2025-09-08 [high] Tricolor Auto suspends operations, places majority of workforce ... (news.dealershipguy.com)
+      2025-09-08 [high] Car Dealership Guy on X: "[NEWS] Subprime lender Tricolor Auto ... (x.com)
+[replay as_of 2025-09-09] new signals:  8  max severity: CRITICAL <-- ALERT
+      2025-09-09 [CRITICAL] Exclusive: Tricolor Auto is filing for bankruptcy, sources say (news.dealershipguy.com)
+      2025-09-09 [CRITICAL] Car Dealership Guy (@cardealershipguy) on Threads (threads.com)
+      2025-09-09 [CRITICAL] Banco toma control de Tricolor Auto y ponen en licencia temporal ... (univision.com)
+      2025-09-09 [CRITICAL] Tricolor Auto expected to file for bankruptcy, sources say - Auto ... (autofinancenews.net)
+      2025-09-09 [CRITICAL] [BREAKING] Tricolor Auto Group is bracing for bankruptcy: Internal ... (threads.com)
+      2025-09-09 [high] Tricolor Auto said to furlough employees, shutter operations - ... (autofinancenews.net)
+      2025-09-09 [high] Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ... (bloomberg.com)
+[replay as_of 2025-09-10] new signals: 37  max severity: CRITICAL <-- ALERT
+      2025-09-10 [CRITICAL] Used-car retailer Tricolor files for bankruptcy; banks face losses ... (autonews.com)
+      2025-09-10 [CRITICAL] Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas ... (inforuptcy.com)
+      2025-09-10 [CRITICAL] Tricolor Auto Acceptance files for Chapter 7 bankruptcy - Auto ... (autofinancenews.net)
+      2025-09-10 [CRITICAL] Tricolor Auto Group, LLC Bankruptcy (3:25-bk-33496), Texas Northern ... (pacermonitor.com)
+      2025-09-10 [CRITICAL] Subprime Auto Lender Tricolor Goes Bankrupt, Fraud Leaves Banks ... (youtube.com)
+      2025-09-10 [CRITICAL] Auto dealer Tricolor files for bankruptcy, moves to liquidate (ca.finance.yahoo.com)
+      2025-09-10 [CRITICAL] Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360 ... (law360.com)
+      2025-09-10 [CRITICAL] Auto lender Tricolor files for bankruptcy, moves to liquidate | ... (content.next.westlaw.com)
+      2025-09-10 [CRITICAL] Tricolor Auto Acceptance, LLC Bankruptcy (3:25-bk-33497), Texas ... (pacermonitor.com)
+      2025-09-10 [CRITICAL] Tricolor Auto Receivables LLC Bankruptcy (3:25-bk-33498) ... (pacermonitor.com)
+      2025-09-10 [CRITICAL] Auto lender Tricolor files for bankruptcy, moves to liquidate (ainvest.com)
+      2025-09-10 [CRITICAL] After Fifth Third takes credit hit, borrower goes bankrupt | American ... (americanbanker.com)
+      2025-09-10 [CRITICAL] Tricolor Subprime Auto Lender Files for Bankruptcy - Bloomberg (archive.ph)
+      2025-09-10 [CRITICAL] Subprime Car Lender Tricolor Seeks Liquidation Amid $200M Loss ... (ainvest.com)
+      2025-09-10 [CRITICAL] Banks Face Losses on Subprime Auto Loans to Tricolor | Fraud Probe ... (indexbox.io)
+      2025-09-10 [CRITICAL] Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360 (law360.com)
+      2025-09-10 [CRITICAL] Banks Face Losses Tied to Subprime Auto Lender Tricolor Holdings (ainvest.com)
+      2025-09-10 [CRITICAL] Fifth Third borrower goes bankrupt after bank takes big loss | ... (today.westlaw.com)
+      2025-09-10 [CRITICAL] Fifth Third Says $200 Million Loan Fraud Isolated Incident | ... (pymnts.com)
+      2025-09-10 [CRITICAL] Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360 (law360.com)
+      2025-09-10 [CRITICAL] Auto dealer Tricolor files for bankruptcy, moves to liquidate (ca.finance.yahoo.com)
+      2025-09-10 [CRITICAL] Tricolor Files for Bankruptcy. The Auto Lender Was Once an ESG ... (biztoc.com)
+      2025-09-10 [CRITICAL] Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas ... (bkalerts.com)
+      2025-09-10 [CRITICAL] US Department of Justice Probing Tricolor: FT (news.bloomberglaw.com)
+      2025-09-10 [CRITICAL] US justice department probes subprime car lender Tricolor (biztoc.com)
+      2025-09-10 [CRITICAL] Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360 (law360.com)
+      2025-09-10 [CRITICAL] Fifth Third reports $200M loan mired in fraud investigation, will ... (eu.cincinnati.com)
+      2025-09-10 [CRITICAL] Fifth Third Says $200 Million Loan Fraud Isolated Incident | ... (pymnts.com)
+      2025-09-10 [CRITICAL] Subprime Auto Lender Tricolor Files for Bankruptcy (biztoc.com)
+      2025-09-10 [CRITICAL] $200 Million Gone? Fifth Third Hit by Stunning Fraud Tied to Subprime ... (finance.yahoo.com)
+      2025-09-10 [high] Tricolor Bonds Drop as Banks Brace for Writedowns Tied to Lender (news.bloomberglaw.com)
+      2025-09-10 [high] JPMorgan, Fifth Third among banks facing losses tied to Tricolor (theedgemalaysia.com)
+
+API usage: {'search': 124, 'contents_pages': 45}  (~$0.62 search + $0.045 contents)
+
+=== Timeline: tricolor (46 signals, severity >= 2) ===
+2025-07-26 T- 46d [elevated] credit                       r/EconomyCharts on Reddit: US auto loan delinquency rates keep ...  (reddit.com)
+2025-09-06 T-  4d [CRITICAL] lender_action                Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Directory 3  (newsdirectory3.com)
+2025-09-06 T-  4d [CRITICAL] lender_action                Tricolor Auto Takeover: Texas Banks Seize Dealership – Latest ...  (memesita.com)
+2025-09-06 T-  4d [    high] operations                   Car Dealership Guy (@GuyDealership) on X  (x.com)
+2025-09-07 T-  3d [    high] lender_disclosure,sec_filing obnk-20250907  (sec.gov)
+2025-09-08 T-  2d [    high] operations                   Tricolor Auto suspends operations, places majority of workforce ...  (news.dealershipguy.com)
+2025-09-08 T-  2d [    high] operations                   Car Dealership Guy on X: "[NEWS] Subprime lender Tricolor Auto ...  (x.com)
+2025-09-09 T-  1d [CRITICAL] insolvency,operations        Exclusive: Tricolor Auto is filing for bankruptcy, sources say  (news.dealershipguy.com)
+2025-09-09 T-  1d [CRITICAL] insolvency,operations        Car Dealership Guy (@cardealershipguy) on Threads  (threads.com)
+2025-09-09 T-  1d [CRITICAL] lender_action,operations     Banco toma control de Tricolor Auto y ponen en licencia temporal ...  (univision.com)
+2025-09-09 T-  1d [CRITICAL] insolvency,operations        Tricolor Auto expected to file for bankruptcy, sources say - Auto ...  (autofinancenews.net)
+2025-09-09 T-  1d [CRITICAL] insolvency,lender_action,operations [BREAKING] Tricolor Auto Group is bracing for bankruptcy: Internal ...  (threads.com)
+2025-09-09 T-  1d [    high] operations                   Tricolor Auto said to furlough employees, shutter operations - ...  (autofinancenews.net)
+2025-09-09 T-  1d [    high] operations,credit            Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...  (bloomberg.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,operations        Used-car retailer Tricolor files for bankruptcy; banks face losses ...  (autonews.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas ...  (inforuptcy.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,operations        Tricolor Auto Acceptance files for Chapter 7 bankruptcy - Auto ...  (autofinancenews.net)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Tricolor Auto Group, LLC Bankruptcy (3:25-bk-33496), Texas Northern ...  (pacermonitor.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud             Subprime Auto Lender Tricolor Goes Bankrupt, Fraud Leaves Banks ...  (youtube.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,funding     Auto dealer Tricolor files for bankruptcy, moves to liquidate  (ca.finance.yahoo.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360 ...  (law360.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,credit      Auto lender Tricolor files for bankruptcy, moves to liquidate | ...  (content.next.westlaw.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Tricolor Auto Acceptance, LLC Bankruptcy (3:25-bk-33497), Texas ...  (pacermonitor.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Tricolor Auto Receivables LLC Bankruptcy (3:25-bk-33498) ...  (pacermonitor.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,funding     Auto lender Tricolor files for bankruptcy, moves to liquidate  (ainvest.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,lender_disclosure After Fifth Third takes credit hit, borrower goes bankrupt | American ...  (americanbanker.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,operations,credit Tricolor Subprime Auto Lender Files for Bankruptcy - Bloomberg  (archive.ph)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,operations,funding,financing Subprime Car Lender Tricolor Seeks Liquidation Amid $200M Loss ...  (ainvest.com)
+2025-09-10 T-  0d [CRITICAL] fraud,operations             Banks Face Losses on Subprime Auto Loans to Tricolor | Fraud Probe ...  (indexbox.io)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360  (law360.com)
+2025-09-10 T-  0d [CRITICAL] fraud                        Banks Face Losses Tied to Subprime Auto Lender Tricolor Holdings  (ainvest.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,lender_disclosure Fifth Third borrower goes bankrupt after bank takes big loss | ...  (today.westlaw.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,operations  Fifth Third Says $200 Million Loan Fraud Isolated Incident | ...  (pymnts.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360  (law360.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,funding     Auto dealer Tricolor files for bankruptcy, moves to liquidate  (ca.finance.yahoo.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Tricolor Files for Bankruptcy. The Auto Lender Was Once an ESG ...  (biztoc.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas ...  (bkalerts.com)
+2025-09-10 T-  0d [CRITICAL] fraud                        US Department of Justice Probing Tricolor: FT  (news.bloomberglaw.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   US justice department probes subprime car lender Tricolor  (biztoc.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Subprime Lender Tricolor Auto Hits Ch. 7 With Over $1B Debt - Law360  (law360.com)
+2025-09-10 T-  0d [CRITICAL] fraud,operations             Fifth Third reports $200M loan mired in fraud investigation, will ...  (eu.cincinnati.com)
+2025-09-10 T-  0d [CRITICAL] insolvency,fraud,operations  Fifth Third Says $200 Million Loan Fraud Isolated Incident | ...  (pymnts.com)
+2025-09-10 T-  0d [CRITICAL] insolvency                   Subprime Auto Lender Tricolor Files for Bankruptcy  (biztoc.com)
+2025-09-10 T-  0d [CRITICAL] fraud                        $200 Million Gone? Fifth Third Hit by Stunning Fraud Tied to Subprime ...  (finance.yahoo.com)
+2025-09-10 T-  0d [    high] operations,credit            Tricolor Bonds Drop as Banks Brace for Writedowns Tied to Lender  (news.bloomberglaw.com)
+2025-09-10 T-  0d [    high] operations                   JPMorgan, Fifth Third among banks facing losses tied to Tricolor  (theedgemalaysia.com)

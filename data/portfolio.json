@@ -1,0 +1,68 @@
+{
+  "_disclaimer": "HYPOTHETICAL demo portfolio. Counterparty names are real public companies; every position, size and term is invented for demonstration.",
+  "fund": "Demo ABF Opportunities Fund I (hypothetical)",
+  "counterparties": [
+    {
+      "id": "tricolor",
+      "name": "Tricolor Holdings",
+      "role": "originator/servicer",
+      "sector": "subprime auto",
+      "aliases": ["tricolor"],
+      "context": ["auto", "lender", "subprime", "dealership", "securitization", "loan", "bank", "holdings", "chu"],
+      "queries": [
+        "Tricolor Auto",
+        "Tricolor Holdings subprime auto lender",
+        "Tricolor Auto Securitization Trust",
+        "Tricolor auto lender layoffs lawsuit investigation"
+      ]
+    },
+    {
+      "id": "first_brands",
+      "name": "First Brands Group",
+      "role": "obligor (trade receivables)",
+      "sector": "auto parts",
+      "aliases": ["first brands"],
+      "context": ["auto", "parts", "debt", "loan", "lender", "creditor", "financing", "patrick james", "brakes", "fram"],
+      "queries": [
+        "First Brands Group",
+        "First Brands Group debt refinancing",
+        "First Brands invoice financing factoring"
+      ]
+    }
+  ],
+  "positions": [
+    {
+      "id": "abf-001",
+      "name": "Tricolor senior warehouse facility",
+      "asset_class": "ABF",
+      "facility_type": "senior secured warehouse line",
+      "collateral": "subprime used-auto retail installment contracts (TX, CA)",
+      "commitment_usd": 75000000,
+      "hypothetical": true,
+      "notes": "85% advance rate; borrowing base reported monthly; Tricolor is also servicer.",
+      "counterparties": [{"id": "tricolor", "relationship": "borrower + servicer"}]
+    },
+    {
+      "id": "abf-002",
+      "name": "Tricolor Auto Securitization Trust 2025-2, Class B notes",
+      "asset_class": "ABF",
+      "facility_type": "ABS mezzanine notes",
+      "collateral": "subprime auto loan pool",
+      "commitment_usd": 20000000,
+      "hypothetical": true,
+      "notes": "Held position in a real public deal name; size invented.",
+      "counterparties": [{"id": "tricolor", "relationship": "sponsor + servicer"}]
+    },
+    {
+      "id": "abf-003",
+      "name": "Auto-parts supplier receivables facility",
+      "asset_class": "ABF",
+      "facility_type": "trade receivables purchase facility",
+      "collateral": "invoices owed by large auto-parts retailers",
+      "commitment_usd": 40000000,
+      "hypothetical": true,
+      "notes": "Receivables originated by First Brands Group.",
+      "counterparties": [{"id": "first_brands", "relationship": "seller + servicer"}]
+    }
+  ]
+}
