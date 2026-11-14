@@ -17,9 +17,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from youfin.agents.verifier import Verifier, receipt_sources  # noqa: E402
+from youfin.agents.verifier import NOT_COUNTED, Verifier, receipt_sources  # noqa: E402
 from youfin.db import connect  # noqa: E402
-from youfin.llm import SCHEMA_SQL  # noqa: E402
+from youfin.llm import ensure_schema  # noqa: E402
 from youfin.sources import TIER_NAMES  # noqa: E402
 from youfin.youcom import YouClient  # noqa: E402
 
@@ -31,14 +31,18 @@ def parse_events(items: list[str] | None) -> dict[str, date]:
     out = {}
     for it in items or []:
         cp, _, d = it.partition("=")
-        out[cp] = date.fromisoformat(d)
+        try:
+            out[cp] = date.fromisoformat(d)
+        except ValueError:
+            sys.exit(f"--event expects counterparty=YYYY-MM-DD (e.g. tricolor=2025-09-10), got {it!r}")
     return out
 
 
 def lead(d: str | None, event: date | None) -> str:
     if not (d and event):
         return "      "
-    return f"T-{(event - date.fromisoformat(d)).days:>3}d"
+    days = (event - date.fromisoformat(d)).days
+    return f"T{'-' if days >= 0 else '+'}{abs(days):>3}d"  # T+ = after the credit event
 
 
 def report(conn, cps: list[str], events: dict[str, date], min_level: str, receipts: int) -> None:
@@ -55,22 +59,43 @@ def report(conn, cps: list[str], events: dict[str, date], min_level: str, receip
         print(f"first WATCH: {first_watch} {lead(first_watch, ev_date)}   "
               f"first verified ALERT: {first_alert} {lead(first_alert, ev_date)}")
         for r in rows:
-            n_src = conn.execute("SELECT COUNT(*) FROM event_sources WHERE event_id=?",
-                                 (r["id"],)).fetchone()[0]
+            n_src, n_model = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(merge_basis IN (%s)), 0) FROM event_sources "
+                "WHERE event_id=?" % ",".join("?" * len(NOT_COUNTED)),
+                (*NOT_COUNTED, r["id"])).fetchone()
+            model = f", {n_model} attached by a model, not counted" if n_model else ""
             print(f"\n{LEVEL_ICON[r['alert_level']]} {r['first_published']} "
                   f"{lead(r['first_published'], ev_date)} [{SEV[r['severity']]:>8}] "
                   f"{r['primary_tag']:<18} {r['verdict']} ({r['n_publishers']} publishers, "
-                  f"{n_src} articles, conf {r['confidence']:.2f})")
+                  f"{n_src} articles{model}, conf {r['confidence']:.2f})")
             print(f"     {r['headline'][:110]}")
             if r["alerted_as_of"]:
                 print(f"     ALERT raised as of {r['alerted_as_of']} {lead(r['alerted_as_of'], ev_date)}")
             srcs = receipt_sources(conn, r["id"], receipts)
-            for d in conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
-                                  (r["id"],)).fetchall():
-                print(f"       ~ LLM {d['kind']} -> {'yes' if d['answer'] else 'no'} "
+            decisions = conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
+                                     (r["id"],)).fetchall()
+            routine = ("merged (rule + embedding)", "merged (tag/title rule)")
+            both = [d["score"] for d in decisions if d["applied"] == routine[0]]
+            rule = [d["score"] for d in decisions if d["applied"] == routine[1]]
+            parts = [f"{len(both)} at cos >= high (tag/title rule agrees)"] if both else []
+            if rule:
+                parts.append(f"{len(rule)} by the tag/title rule alone (cos {min(rule):.2f}"
+                             + (f"-{max(rule):.2f})" if len(rule) > 1 else ")"))
+            if parts:
+                print(f"       ~ EMB merged {', '.join(parts)}")
+            for d in decisions:
+                if d["applied"] in routine:
+                    continue
+                if d["kind"] == "embed":
+                    print(f"       ~ EMB cos {d['score']:.2f} -> [{d['applied']}] "
+                          f"{(d['subject'] or '')[:60]}: {d['reason']}")
+                    continue
+                cos = f" (cos {d['score']:.2f})" if d["score"] is not None else ""
+                print(f"       ~ LLM {d['kind']}{cos} -> {'yes' if d['answer'] else 'no'} "
                       f"[{d['applied']}] {(d['subject'] or '')[:60]}: {d['reason']}")
             for s in srcs:
-                print(f"       - [{TIER_NAMES[s['tier']]}/{s['role']}] {s['domain']} "
+                nc = f", {s['merge_basis']}: not counted" if s["merge_basis"] in NOT_COUNTED else ""
+                print(f"       - [{TIER_NAMES[s['tier']]}/{s['role']}{nc}] {s['domain']} "
                       f"({s['published_at']}): \"{(s['quote'] or '')[:160]}\"")
 
 
@@ -86,24 +111,38 @@ def main() -> None:
     args = ap.parse_args()
 
     conn = connect()
-    conn.executescript(SCHEMA_SQL)
+    ensure_schema(conn)
     cps = args.counterparty or [r["id"] for r in conn.execute("SELECT id FROM counterparties")]
     events = parse_events(args.event)
 
     if args.mode == "reset":
+        # One transaction; limited to --counterparty when given (it used to clear everything).
+        marks = ",".join("?" * len(cps))
+        evs = f"SELECT id FROM events WHERE counterparty_id IN ({marks})"
         with conn:
-            conn.execute("UPDATE signals SET event_id=NULL")
-            conn.executescript(SCHEMA_SQL)
-            for t in ("event_verifications", "event_sources", "events", "llm_decisions"):
-                conn.execute(f"DELETE FROM {t}")
-        print("events cleared")
+            conn.execute(f"UPDATE signals SET event_id=NULL WHERE counterparty_id IN ({marks})", cps)
+            for t in ("event_verifications", "event_sources", "llm_decisions"):
+                conn.execute(f"DELETE FROM {t} WHERE event_id IN ({evs})", cps)
+            if not args.counterparty:
+                conn.execute("DELETE FROM llm_decisions")  # incl. decisions not tied to an event
+            conn.execute(f"DELETE FROM events WHERE counterparty_id IN ({marks})", cps)
+        print(f"events cleared for {', '.join(cps) or 'no counterparties'}")
         return
 
     if args.mode == "requote":
-        v = Verifier(conn, YouClient())
+        try:
+            client = YouClient()
+        except RuntimeError:  # no API key: stored data only
+            client = None
+        v = Verifier(conn, client, use_llm=False, use_embed=False)
         stats = v.requote()
         print(f"requote: {stats}")
-        print(f"API usage: {v.client.calls} (~${v.client.calls['search'] * 0.005:.2f})")
+        if client is None:
+            print("no You.com key: quotes re-derived from stored data only")
+        else:
+            print(f"API usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
+        for e in v.errors:
+            print(f"WARNING: {e}")
 
     if args.mode in ("replay", "live"):
         client = YouClient()
@@ -111,8 +150,8 @@ def main() -> None:
         if args.mode == "live":
             days = [date.today()]
         else:
-            if not (args.start and args.end):
-                ap.error("replay needs --start and --end")
+            if not (args.start and args.end) or args.start > args.end:
+                ap.error("replay needs --start and --end, with start <= end")
             days = [args.start + timedelta(n) for n in range((args.end - args.start).days + 1)]
         for d in days:
             n, verified = v.step(d, args.mode)
@@ -129,7 +168,22 @@ def main() -> None:
             avg = j.live_seconds / j.live_calls if j.live_calls else 0
             print(f"LLM ({j.model}): {j.live_calls} live calls, avg {avg:.1f}s, "
                   f"{j.cache_hits} cache hits, available={j.available}")
+            if j.failed_calls:
+                print(f"WARNING: {j.failed_calls} LLM call(s) got no answer; those keyword matches / "
+                      "merges were decided without the model")
+        e = v.embedder
+        if e:
+            print(f"Embeddings ({e.model}): {e.live_texts} texts embedded in {e.live_seconds:.1f}s, "
+                  f"{e.cache_hits} cache hits, available={e.available}")
+        st = v.stats
+        print(f"cluster: {st['cluster_s']:.1f}s total, {st['same_event_calls']} LLM same_event "
+              f"calls ({st['same_event_live']} live)")
         print(f"\nAPI usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
+        if v.errors:
+            print(f"WARNING: {len(v.errors)} corroboration search(es) failed and were not counted "
+                  "as attempts:")
+            for e in v.errors:
+                print(f"  {e}")
         a = getattr(v, "archive", None)
         if a:
             print(f"archive.org: {a.requests} requests, {a.lookups} lookups, {a.cache_hits} cache hits")

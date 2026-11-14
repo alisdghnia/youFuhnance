@@ -11,15 +11,32 @@ import hashlib
 import json
 import os
 import sqlite3
+import sys
 import time
+import urllib.error
 import urllib.request
+
+from . import config  # noqa: F401  (loads .env before the settings below are read)
 
 HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 if not HOST.startswith("http"):
     HOST = "http://" + HOST
-MODEL = os.environ.get("YOUFIN_LLM_MODEL", "llama3.1:8b")
+MODEL = os.environ.get("YOUFIN_LLM_MODEL", "qwen3:8b")
+# Models with a reasoning ("thinking") mode: turn it off; we want a short JSON verdict.
+THINKING_MODELS = ("qwen3", "deepseek-r1", "gpt-oss")
 TIMEOUT = float(os.environ.get("YOUFIN_LLM_TIMEOUT", "90"))
 MAX_TEXT = 1500
+MAX_FAILURES = 3   # consecutive slow / malformed replies before the judge is switched off
+
+
+def is_down(e: Exception) -> bool:
+    """True when Ollama itself is unreachable or the model is missing (retrying is pointless);
+    False for a timeout or a malformed reply, which says nothing about the next call."""
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code == 404                       # model not pulled
+    if isinstance(e, urllib.error.URLError):
+        return not isinstance(e.reason, TimeoutError)   # refused / no route / DNS
+    return isinstance(e, ConnectionError)
 
 TAG_MEANING = {
     "insolvency": "bankruptcy, insolvency or restructuring of the company",
@@ -40,7 +57,7 @@ SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS llm_cache (key TEXT PRIMARY KEY, response TEXT);
 CREATE TABLE IF NOT EXISTS llm_decisions (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind      TEXT NOT NULL,       -- same_event | supports_claim
+    kind      TEXT NOT NULL,       -- same_event | supports_claim | embed (cluster rule)
     as_of     TEXT,
     event_id  INTEGER,
     subject   TEXT,                -- new title / url that was judged
@@ -49,9 +66,31 @@ CREATE TABLE IF NOT EXISTS llm_decisions (
     model     TEXT,
     cached    INTEGER NOT NULL,
     latency_s REAL NOT NULL,
-    applied   TEXT                 -- what the verifier did with the answer
+    applied   TEXT,                -- what the verifier did with the answer
+    score     REAL                 -- embedding cosine behind the decision, if any
 );
 """
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript(SCHEMA_SQL)
+    if "score" not in {r[1] for r in conn.execute("PRAGMA table_info(llm_decisions)")}:
+        conn.execute("ALTER TABLE llm_decisions ADD COLUMN score REAL")
+        conn.commit()
+
+
+def log_decision(conn: sqlite3.Connection, kind: str, as_of: str | None, subject: str,
+                 answer: bool, reason: str, model: str, cached: bool, latency_s: float,
+                 event_id: int | None = None, applied: str | None = None,
+                 score: float | None = None) -> int:
+    cur = conn.execute(
+        "INSERT INTO llm_decisions (kind, as_of, event_id, subject, answer, reason, model, cached, "
+        "latency_s, applied, score) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (kind, as_of, event_id, (subject or "")[:200], int(answer), reason, model, int(cached),
+         round(latency_s, 2), applied, None if score is None else round(score, 4)))
+    return cur.lastrowid
+
+
 _FORMAT = {"type": "object", "required": ["answer", "reason"], "properties": {
     "answer": {"type": "boolean"}, "reason": {"type": "string"}}}
 
@@ -64,8 +103,21 @@ class Judge:
         self.live_calls = 0
         self.live_seconds = 0.0
         self.cache_hits = 0
+        self.failed_calls = 0          # calls that got no answer (the caller used its fallback)
+        self._streak = 0
         self.last_decision: int | None = None
-        conn.executescript(SCHEMA_SQL)
+        ensure_schema(conn)
+
+    def _failed(self, e: Exception) -> None:
+        """One bad reply only costs that call. The judge is switched off (and says so, once)
+        when Ollama is unreachable or keeps failing: a silent switch-off would let later
+        keyword matches through without the veto and make runs differ for no visible reason."""
+        self.failed_calls += 1
+        self._streak += 1
+        if is_down(e) or self._streak >= MAX_FAILURES:
+            self.available = False
+            print(f"[llm] {self.model} unavailable ({type(e).__name__}); continuing without the "
+                  "LLM veto / merge check for the rest of this run", file=sys.stderr)
 
     # ------------------------------------------------------------------ plumbing
     def _chat(self, system: str, user: str) -> tuple[dict | None, bool, float]:
@@ -76,22 +128,26 @@ class Judge:
             return json.loads(row[0]), True, 0.0
         if self.available is False:
             return None, False, 0.0
-        body = json.dumps({
+        payload = {
             "model": self.model, "stream": False, "format": _FORMAT,
             "options": {"temperature": 0},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        }).encode()
+        }
+        if self.model.startswith(THINKING_MODELS):
+            payload["think"] = False
+        body = json.dumps(payload).encode()
         req = urllib.request.Request(f"{HOST}/api/chat", body, {"Content-Type": "application/json"})
         t0 = time.time()
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                 out = json.loads(json.loads(r.read())["message"]["content"])
             out = {"answer": bool(out["answer"]), "reason": str(out.get("reason", ""))[:240]}
-        except Exception:
-            self.available = False  # server down / model missing: heuristics take over
+        except Exception as e:  # heuristics take over for this call
+            self._failed(e)
             return None, False, 0.0
         dt = time.time() - t0
         self.available = True
+        self._streak = 0
         self.live_calls += 1
         self.live_seconds += dt
         self.conn.execute("INSERT OR REPLACE INTO llm_cache VALUES (?,?)", (key, json.dumps(out)))
@@ -103,18 +159,16 @@ class Judge:
         if out is None:
             self.last_decision = None
             return None
-        cur = self.conn.execute(
-            "INSERT INTO llm_decisions (kind, as_of, subject, answer, reason, model, cached, latency_s) "
-            "VALUES (?,?,?,?,?,?,?,?)",
-            (kind, as_of, subject[:200], int(out["answer"]), out["reason"], self.model,
-             int(cached), round(dt, 2)))
-        self.last_decision = cur.lastrowid
+        self.last_decision = log_decision(self.conn, kind, as_of, subject, out["answer"],
+                                          out["reason"], self.model, cached, dt)
         return out["answer"], out["reason"]
 
-    def annotate(self, decision_id: int | None, event_id: int | None, applied: str) -> None:
+    def annotate(self, decision_id: int | None, event_id: int | None, applied: str,
+                 score: float | None = None) -> None:
         if decision_id:
-            self.conn.execute("UPDATE llm_decisions SET event_id=?, applied=? WHERE id=?",
-                              (event_id, applied, decision_id))
+            self.conn.execute(
+                "UPDATE llm_decisions SET event_id=?, applied=?, score=COALESCE(?, score) WHERE id=?",
+                (event_id, applied, None if score is None else round(score, 4), decision_id))
 
     # ------------------------------------------------------------------ judgments
     def same_event(self, event_headline: str, event_tag: str, new_title: str, new_text: str,
@@ -135,6 +189,8 @@ class Judge:
                   "itself states or reports the claim, i.e. it is about this development. Merely "
                   "mentioning the company, or an unrelated topic, does not support the claim. Reply as "
                   "JSON with fields answer (boolean) and reason (one short sentence).")
+        # The caller passes the evidence passages (see verifier.evidence_window); the cut here
+        # is only a backstop for other callers.
         user = (f"Claim: {event_headline}\nClaim type: {TAG_MEANING.get(event_tag, event_tag)}\n\n"
                 f"Article text: {article_text[:MAX_TEXT]}\n\nDoes the article support the claim?")
         return self._ask("supports_claim", system, user, subject or article_text[:100], as_of)
