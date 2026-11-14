@@ -44,6 +44,7 @@ class NewSignal:
     severity: int
     tags: list[str]
     matched_terms: list[str]
+    id: int | None = None
 
 
 def score(text: str, domain: str) -> tuple[int, list[str], list[str]]:
@@ -85,9 +86,38 @@ def _pub_date(page_age: str | None) -> date | None:
 
 
 class Scout:
-    def __init__(self, conn: sqlite3.Connection, client: YouClient | None = None):
+    def __init__(self, conn: sqlite3.Connection, client: YouClient | None = None, bus=None):
         self.conn = conn
-        self.client = client or YouClient()
+        self.client = client  # created lazily so --from-db replays need no API key
+        self.bus = bus
+
+    def _client(self) -> YouClient:
+        if self.client is None:
+            self.client = YouClient()
+        return self.client
+
+    def _announce(self, sig_id: int, cp_id: str, severity: int, tags: list[str],
+                  url: str, as_of: str) -> None:
+        if self.bus is not None:
+            self.bus.publish("signals", f"signal-{sig_id}", {
+                "id": sig_id, "counterparty": cp_id, "severity": severity, "tags": tags,
+                "url": url, "as_of": as_of,
+                "summary": f"signal {sig_id} {cp_id} sev{severity} {','.join(tags) or '-'}",
+            }, "scout")
+
+    def emit_from_db(self, as_of: date, first_day: bool = False,
+                     counterparty_ids: list[str] | None = None) -> int:
+        """Zero-cost replay: re-announce stored signals first seen on `as_of` (all earlier
+        ones too on the first day) without any You.com calls."""
+        op = "<=" if first_day else "="
+        rows = self.conn.execute(
+            f"SELECT id, counterparty_id, url, severity, tags, first_seen_as_of FROM signals "
+            f"WHERE first_seen_as_of {op} ? ORDER BY id", (as_of.isoformat(),)).fetchall()
+        rows = [r for r in rows if not counterparty_ids or r["counterparty_id"] in counterparty_ids]
+        for r in rows:
+            self._announce(r["id"], r["counterparty_id"], r["severity"], json.loads(r["tags"]),
+                           r["url"], r["first_seen_as_of"])
+        return len(rows)
 
     def sweep(
         self,
@@ -108,7 +138,7 @@ class Scout:
             aliases = [a.lower() for a in json.loads(cp["aliases"])]
             context = [c.lower() for c in json.loads(cp["context"] or "[]")]
             for query in json.loads(cp["queries"]):
-                results = self.client.search(
+                results = self._client().search(
                     query, count=20, freshness=freshness, exclude_domains=JUNK_DOMAINS
                 )
                 kept = 0
@@ -168,8 +198,9 @@ class Scout:
         )
         if cur.rowcount == 0:
             return None  # already seen in an earlier sweep
+        self._announce(cur.lastrowid, cp_id, severity, tags, url, as_of.isoformat())
         return NewSignal(cp_id, url, title, domain, pub.isoformat() if pub else None,
-                         severity, tags, terms)
+                         severity, tags, terms, cur.lastrowid)
 
     def _archive(self):
         if getattr(self, "archive", None) is None:
@@ -206,7 +237,7 @@ class Scout:
     def _fetch_full_text(self, signals: list[NewSignal]) -> None:
         urls = sorted({s.url for s in signals})
         for i in range(0, len(urls), 10):
-            for page in self.client.contents(urls[i:i + 10]):
+            for page in self._client().contents(urls[i:i + 10]):
                 if page.get("markdown"):
                     self.conn.execute(
                         "UPDATE articles SET markdown=?, fetched_at=datetime('now') WHERE url=?",

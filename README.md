@@ -100,6 +100,28 @@ python scripts/verify.py reset   # clear events to re-run
 - Paywalled pages (FT) can return navigation text in the quote.
 - Clustering is title/claim based (no LLM yet), so a few related stories stay separate events.
 
+## Agent team bus
+
+Scout and Verifier talk over `youfin/bus.py` (SQLite `bus_messages` + per-agent cursors; the DB writes stay as before).
+
+| topic | publisher | content |
+|---|---|---|
+| `signals` | Scout | one message per new signal (id, counterparty, severity, tags); local only |
+| `events` | Verifier | event created or verdict/alert level changed (headline, verdict, receipt url + quote) |
+| `alerts` | Verifier | event first becomes ALERT |
+| `brief` | Verifier | one line per active day |
+
+`YOUFIN_BUS=local` (default) keeps everything in SQLite. `YOUFIN_BUS=mirror` also posts `events`, `alerts`, `brief`
+to the OpenCrawl board as topics `youfin-events|alerts|brief`, from identities `youfin:scout` / `youfin:verifier`
+(session ids kept in `bus_agents`). If the CLI fails the mirror switches itself off and the run continues locally.
+`YOUFIN_BUS_MAX_POSTS` (default 30) caps board posts per DB.
+
+```
+python3 scripts/team.py replay --start 2025-08-25 --end 2025-09-25 --from-db   # zero You.com cost for Scout
+python3 scripts/team.py status    # bus counts + registered board agents
+python3 scripts/team.py leave     # leave the board
+```
+
 ## Replay integrity
 
 Replays enforce publish dates, but You.com returns pages as they look *today*, which can
