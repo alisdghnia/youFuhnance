@@ -186,8 +186,11 @@ def alert_level(severity: int, verdict: str) -> str:
 class Verifier:
     def __init__(self, conn: sqlite3.Connection, client: YouClient | None = None,
                  min_severity: int = 3, verify_min_severity: int = 4, judge: Judge | None = None,
-                 use_llm: bool = True):
+                 use_llm: bool = True, bus=None):
         self.conn = conn
+        self.bus = bus
+        if bus is not None:
+            bus.subscribe("verifier", ["signals"])
         self.judge = judge if judge is not None else (Judge(conn) if use_llm else None)
         self.client = client
         self.min_severity = min_severity
@@ -254,10 +257,14 @@ class Verifier:
         )
 
     # ---------------------------------------------------------------- 1. cluster
-    def cluster(self, as_of: date) -> int:
+    def cluster(self, as_of: date, signal_ids: list[int] | None = None) -> int:
+        """signal_ids: cluster only these signals (the ones received over the bus)."""
+        only = ""
+        if signal_ids is not None:
+            only = f"AND s.id IN ({','.join(str(int(i)) for i in signal_ids) or 'NULL'}) "
         rows = self.conn.execute(
             "SELECT s.*, a.title, a.domain FROM signals s JOIN articles a USING (url) "
-            "WHERE s.event_id IS NULL AND s.first_seen_as_of <= ? AND s.severity >= ? "
+            "WHERE s.event_id IS NULL AND s.first_seen_as_of <= ? AND s.severity >= ? " + only +
             "ORDER BY s.published_at, s.id",
             (as_of.isoformat(), self.min_severity),
         ).fetchall()
@@ -467,5 +474,51 @@ class Verifier:
         return score(" ".join([short, *self._highlights(row["url"])]), domain)[2]
 
     def step(self, as_of: date, mode: str = "replay"):
-        n = self.cluster(as_of)
-        return n, self.verify(as_of, mode)
+        if self.bus is None:
+            n = self.cluster(as_of)
+            return n, self.verify(as_of, mode)
+        before = self._event_state()
+        msgs = self.bus.poll("verifier")
+        n = self.cluster(as_of, [m["payload"]["id"] for m in msgs if m["topic"] == "signals"])
+        verified = self.verify(as_of, mode)
+        self._publish_changes(before, as_of, n, len(msgs))
+        return n, verified
+
+    # ---------------------------------------------------------------- bus output
+    def _event_state(self) -> dict[int, tuple]:
+        return {r["id"]: (r["verdict"], r["alert_level"]) for r in self.conn.execute(
+            "SELECT id, verdict, alert_level FROM events")}
+
+    def _publish_changes(self, before: dict, as_of: date, n_clustered: int, n_msgs: int) -> None:
+        d = as_of.isoformat()
+        changed = 0
+        for ev in self.conn.execute("SELECT * FROM events ORDER BY id").fetchall():
+            old = before.get(ev["id"])
+            now = (ev["verdict"], ev["alert_level"])
+            if old == now:
+                continue
+            changed += 1
+            rec = receipt_sources(self.conn, ev["id"], 1)
+            rec = rec[0] if rec else None
+            cp = ev["counterparty_id"]
+            payload = {
+                "event_id": ev["id"], "counterparty": cp, "verdict": ev["verdict"],
+                "alert_level": ev["alert_level"], "severity": ev["severity"],
+                "tag": ev["primary_tag"], "headline": ev["headline"], "as_of": d,
+                "receipt_url": rec["url"] if rec else None,
+                "quote": (rec["quote"] or "")[:300] if rec else "",
+            }
+            payload["summary"] = (f"{d} {ev['alert_level']} {cp} event {ev['id']} "
+                                  f"{ev['verdict']} sev{ev['severity']}: {ev['headline'][:80]}")
+            self.bus.publish("events", f"event-{ev['id']}-{ev['verdict']}-{ev['alert_level']}",
+                             payload, "verifier")
+            if ev["alert_level"] == "ALERT" and (old is None or old[1] != "ALERT"):
+                payload = dict(payload, summary=f"ALERT {cp} {d}: {ev['headline'][:100]}")
+                self.bus.publish("alerts", f"alert-{ev['id']}", payload, "verifier")
+        if changed or n_clustered:
+            self.bus.publish("brief", f"brief-{d}", {
+                "as_of": d, "signals_received": n_msgs, "clustered": n_clustered,
+                "events_changed": changed,
+                "summary": f"{d}: {n_msgs} signals in, {n_clustered} clustered, "
+                           f"{changed} event updates",
+            }, "verifier")
