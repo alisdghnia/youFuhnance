@@ -5,7 +5,7 @@ first WATCH: 2025-09-02 T- 23d   first verified ALERT: 2025-09-02 T- 23d
 !! 2025-09-01 T- 24d [    high] diligence_red_flag confirmed (6 publishers, 6 articles, conf 0.90)
      Jefferies among private credit investors exposed to US auto company ...
      ALERT raised as of 2025-09-02 T- 23d
-       - [major press/scout] ft.com (2025-09-01): "Accessibility help Skip to navigation Skip to main content Skip to footer > Jefferies among private credit investors exposed to US auto company invoices Registe"
+       - [trade/wire/scout] workingcapitalforum.com (2025-09-01): "Receivables finance in the spotlight as First Brands Group reviews ... Explore the implications for receivables financing and private credit in our analysis of "
 
 !! 2025-09-12 T- 13d [    high] credit             confirmed (9 publishers, 16 articles, conf 0.90)
      Apollo Has Short Position Against Debt of First Brands Group: FT
@@ -58,7 +58,7 @@ first WATCH: 2025-09-07 T-  3d   first verified ALERT: 2025-09-07 T-  3d
 !! 2025-09-09 T-  1d [    high] operations         confirmed (3 publishers, 4 articles, conf 0.90)
      Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
      ALERT raised as of 2025-09-09 T-  1d
-       - [major press/scout] bloomberg.com (2025-09-09): "Bonds sold by Texas-based Tricolor Holdings LLC, which provides subprime auto loans, are trading lower this week after a report saying that the company has furl"
+       - [major press/scout] news.bloomberglaw.com (2025-09-10): "Bonds from Tricolor asset backed securities issued earlier this year traded as low as 12 cents on the dollar on Wednesday, according to traders, extending decli"
 
 !! 2025-09-10 T-  0d [CRITICAL] fraud              confirmed (5 publishers, 5 articles, conf 0.90)
      US Department of Justice Probing Tricolor: FT
