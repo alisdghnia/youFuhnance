@@ -38,21 +38,71 @@ RULES: dict[str, tuple[int, list[str]]] = {
                        r"\bsec\b (probe|investigation)"]),
     "funding":    (2, [r"refinanc\w* (pulled|paused|on pause|delayed)", r"margin call",
                        r"hires? (restructuring )?advisers?", r"creditors"]),
-    "litigation": (2, [r"lawsuit", r"\bsued\b", r"class action", r"complaint filed"]),
+    "litigation": (2, [r"lawsuit", r"\bsued\b", r"class action", r"complaint filed",
+                       r"securities (fraud )?(suit|litigation|class)", r"shareholder (suit|lawsuit|litigation)",
+                       r"investors? (say|allege|claim)\w*\b.{0,80}\b(lied|misled|mislead\w*|deceiv\w*)"]),
     "financing":  (0, [r"securitization", r"issuance", r"assigns? (preliminary )?ratings?",
                        r"closes? \$"]),
 }
 
+# Generic (soft) fraud wording. Hard fraud terms (double-pledge, falsif, embezzl, indict...) stay at 5.
+_SOFT_FRAUD = re.compile(r"fraud|misrepresent|irregularit|subpoena", re.I)
+# Shareholder / securities suits allege misstatements; they are litigation, not company fraud.
+_SECURITIES_SUIT = re.compile(
+    r"class[- ]action|securities (fraud )?(suit|litigation|class)|shareholder (suit|lawsuit|litigation)"
+    r"|investors? (say|allege|claim)\w*\b.{0,80}\b(lied|misled|mislead\w*|deceiv\w*|misrepresent\w*)"
+    r"|\blead plaintiff\b|investors? who (bought|purchased)", re.I)
+# Consumer-scam stories: the brand is a backdrop/victim, not the fraudster.
+_CONSUMER_SCAM = re.compile(r"\bscam(s|med|mers?)?\b|\bvictims?\b|\bphishing\b|identity theft"
+                            r"|(car|vehicle) (buyers?|shoppers?)", re.I)
+# Industry-wide fraud statistics: the company is one name in a list, not the subject.
+_INDUSTRY_STAT = re.compile(r"(auto |loan |lending )?fraud (has |just )?(hit|hits|rises?|rose|surges?)\b"
+                            r"|fraud losses", re.I)
+_LENDER_REG = re.compile(r"lenders?|creditors?|warehouse|credit facility|securitization|auditors?"
+                         r"|\bdoj\b|justice department|\bsec\b|\bfbi\b|prosecutors?|indict|bondholders?"
+                         r"|noteholders?", re.I)
+_YEAR = re.compile(r"\b(20[012]\d)\b")
+
+STALE_CAP = 2
+
+
+def _stale(text: str, pub_year: int | None) -> bool:
+    """True when every year in the text is >=2 years before the publish year (a retrospective)."""
+    if not pub_year:
+        return False
+    years = [int(y) for y in _YEAR.findall(text)]
+    return bool(years) and max(years) <= pub_year - 2
+
+
 _COMPILED = {cat: (w, [re.compile(p, re.I) for p in pats]) for cat, (w, pats) in RULES.items()}
 
 
-def tag(text: str) -> tuple[int, list[str], list[str]]:
+def tag(text: str, pub_year: int | None = None) -> tuple[int, list[str], list[str]]:
     """Return (severity, categories, matched_terms)."""
-    severity, cats, terms = 0, [], []
+    suit = bool(_SECURITIES_SUIT.search(text))
+    scam = (bool(_CONSUMER_SCAM.search(text)) and not _LENDER_REG.search(text)) \
+        or bool(_INDUSTRY_STAT.search(text))
+    severity, cats, terms, softened = 0, [], [], False
     for cat, (weight, patterns) in _COMPILED.items():
         hits = [m.group(0) for p in patterns if (m := p.search(text))]
+        if cat == "fraud" and (suit or scam):
+            hard = [h for h in hits if not _SOFT_FRAUD.search(h)]
+            if scam and not suit and len(hard) < len(hits):
+                cats.append("consumer_fraud")
+                terms.extend(hits)
+                severity = max(severity, 1)
+            elif suit and len(hard) < len(hits):
+                softened = True
+            hits = hard
         if hits:
             cats.append(cat)
             terms.extend(hits)
             severity = max(severity, weight)
+    if softened:  # soft fraud wording inside a shareholder suit: litigation, capped at 3
+        if "litigation" not in cats:
+            cats.append("litigation")
+        severity = max(severity, 3)
+    if _stale(text, pub_year) and severity > STALE_CAP:
+        severity = STALE_CAP
+        cats.append("stale_context")
     return severity, cats, sorted({t.lower() for t in terms})
