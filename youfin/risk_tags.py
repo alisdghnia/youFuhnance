@@ -17,6 +17,7 @@ RULES: dict[str, tuple[int, list[str]]] = {
                        r"subpoena", r"indict", r"embezzl", r"irregularit"]),
     "operations": (4, [r"furlough", r"suspend(s|ed|ing)? (its )?operations", r"shut(s|ting)? (down|operations)",
                        r"layoffs?", r"lays? off", r"halt(s|ed)? (lending|originations)",
+                       r"job cuts?", r"cut(s|ting)? (\w+ ){0,3}jobs",
                        r"paus(e|es|ed) (new )?(loan )?originations", r"goes quiet",
                        r"licencia temporal"]),
     "diligence_red_flag": (4, [r"quality[- ]of[- ]earnings", r"off[- ]balance[- ]sheet",

@@ -12,6 +12,7 @@ its source. Built for the *Ground Truth* hackathon on the You.com API.
 - [x] SQLite store (`data/youfin.db`): counterparties, positions, runs, articles, signals
 - [x] Deterministic risk tagger; each tag stores the terms that triggered it
 - [x] **Verifier agent**: merges syndicated copies into events, rates sources by tier, corroborates via You.com, quotes a receipt for every source
+- [x] **Market Signals & Hedging desk**: public proxies, regime breaks, action window, hedge candidates per ALERT
 - [ ] Sector/Ratings · Contagion mapper · Morning brief
 - [ ] OpenCrawl board as the inter-agent bus
 
@@ -151,9 +152,10 @@ Scout and Verifier talk over `youfin/bus.py` (SQLite `bus_messages` + per-agent 
 | `events` | Verifier | event created or verdict/alert level changed (headline, verdict, receipt url + quote) |
 | `alerts` | Verifier | event first becomes ALERT |
 | `brief` | Verifier | one line per active day |
+| `actions` | Market desk | per ALERT: action window, basket P(stress), top hedge candidates |
 
-`YOUFIN_BUS=local` (default) keeps everything in SQLite. `YOUFIN_BUS=mirror` also posts `events`, `alerts`, `brief`
-to the OpenCrawl board as topics `youfin-events|alerts|brief`, from identities `youfin:scout` / `youfin:verifier`
+`YOUFIN_BUS=local` (default) keeps everything in SQLite. `YOUFIN_BUS=mirror` also posts `events`, `alerts`, `brief`, `actions`
+to the OpenCrawl board as topics `youfin-events|alerts|brief|actions`, from identities `youfin:scout` / `youfin:verifier`
 (session ids kept in `bus_agents`). If the CLI fails the mirror switches itself off and the run continues locally.
 `YOUFIN_BUS_MAX_POSTS` (default 30) caps board posts per DB.
 
@@ -175,3 +177,45 @@ lookup is made only for signals with severity >= 3 and for corroboration hits. T
 stored in `signals.score_basis` / `event_sources.score_basis` (`snapshot` | `title_desc` |
 `live`). Re-score stored data with `python3 scripts/scout.py retag --as-of-replay`.
 Live mode is unchanged.
+
+## Market Signals & Hedging desk
+
+Private loans and ABS can't simply be sold, so for every verified **ALERT** the market desk
+(`youfin/agents/market.py`, bus agent `market`) asks three questions using only market data
+dated on or before the alert (weekend alerts use Friday's close):
+
+1. **Which liquid proxies carry this risk?** `proxies: [{ticker, role}]` per counterparty in
+   `data/portfolio.json` (roles `exposed_lender`, `peer`, `customer`, `sector_etf`, `credit`, `market`).
+2. **Is the market already pricing it?** For each proxy (`youfin/market.py`, daily yfinance bars cached in
+   `market_prices`): 1/3/5-day returns, abnormal return vs SPY (market model fit on the prior 60 bars) as a
+   z-score, 5-day CAR z, the same vs the sector ETF, volume z, realized-vol ratio 5d/60d, drawdown from the 20d high.
+   `youfin/regime.py` adds BOCPD (Adams & MacKay, Normal-Gamma/Student-t, hazard 1/250) on abnormal returns and
+   volume → P(change point in the last 3 days), and a 2-regime Markov-switching model (statsmodels) on the
+   equal-weight basket of non-market proxies' abnormal returns, fit 2023-01-01..D → P(stress).
+   Each proxy gets an **open / closing / closed** window label from documented downside thresholds
+   (e.g. closed = 5-day CAR ≤ -3σ, or a BOCPD break on a ≤ -3σ day). The numbers and the rule that fired are stored.
+3. **Which proxies are the best hedge candidates?** Score = 0.45 role relevance + 0.25 liquidity (60d $ADV)
+   + 0.30 "move not yet happened", with short-borrow / basis / compliance (MNPI) caveats. Analysis, not advice.
+
+The desk writes `market_assessments` and publishes on the `actions` topic; `scripts/team.py replay` runs it after
+the Verifier each day.
+
+```bash
+python3 scripts/market.py assess --counterparty tricolor --as-of 2025-09-07
+python3 scripts/market.py study --counterparty tricolor --start 2025-08-01 --end 2025-09-30 \
+    --event 2025-09-10 --alert 2025-09-07          # -> data/market_study_tricolor.png
+python3 scripts/market.py study --counterparty first_brands --start 2025-08-01 --end 2025-10-15 \
+    --event 2025-09-25 --alert 2025-09-02          # -> data/market_study_first_brands.png
+```
+
+**Result** (lead = trading sessions from our first verified ALERT to the market's break):
+
+| | Window at our alert | Market break | Lead | Top hedge candidates at alert |
+|---|---|---|---|---|
+| Tricolor (alert Sun 09-07, close 09-05) | `closing`, but only from JPM (jobs-day bank selloff) and CPSS drift; OBK, FITB, basket quiet | OBK regime break + closed 09-11; CACC 09-12; basket never entered stress (max P 0.39) | OBK +4, CACC +5 | FITB, CACC, OBK |
+| First Brands (alert 09-02) | `open` (basket P(stress) 0.01, no proxy moving) | JEF closed 10-06; basket P(stress) ≥ 0.5 10-06, overall window closed 10-08 | JEF +24, basket +24 | JEF, AZO, ORLY |
+
+Caveats: the proxy lists were picked knowing who turned out to be exposed; single-day BOCPD misses slow repricing
+(First Brands proxies drifted, so CAR and the basket regime carry that case); labels use daily closes, so the alert
+day's close is included when the alert falls on a trading day; earnings and macro days create false "closing" labels
+that the stored drivers make visible.

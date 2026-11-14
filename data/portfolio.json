@@ -1,5 +1,6 @@
 {
   "_disclaimer": "HYPOTHETICAL demo portfolio. Counterparty names are real public companies; every position, size and term is invented for demonstration.",
+  "_proxies": "Each counterparty lists liquid public proxies for the market desk: role = exposed_lender | peer | customer | sector_etf | credit | market; vs = sector ETF used as a second abnormal-return benchmark; relevance (optional, 0-1) overrides the role default in hedge ranking.",
   "fund": "Demo ABF Opportunities Fund I (hypothetical)",
   "counterparties": [
     {
@@ -14,6 +15,16 @@
         "Tricolor Holdings subprime auto lender",
         "Tricolor Auto Securitization Trust",
         "Tricolor auto lender layoffs lawsuit investigation"
+      ],
+      "proxies": [
+        {"ticker": "OBK", "role": "exposed_lender", "vs": "KRE", "note": "Origin Bancorp: 8-K disclosed ~$30.1M loan commitments"},
+        {"ticker": "FITB", "role": "exposed_lender", "vs": "KRE", "note": "Fifth Third: Tricolor-linked fraud loss disclosed"},
+        {"ticker": "JPM", "role": "exposed_lender", "vs": "KRE", "relevance": 0.5, "note": "JPMorgan: reported warehouse lender; any plausible exposure is tiny vs its equity (diluted)"},
+        {"ticker": "CACC", "role": "peer", "note": "Credit Acceptance: subprime auto lender"},
+        {"ticker": "CPSS", "role": "peer", "note": "Consumer Portfolio Services: subprime auto lender"},
+        {"ticker": "KRE", "role": "sector_etf", "note": "SPDR S&P Regional Banking ETF"},
+        {"ticker": "HYG", "role": "credit", "note": "iShares iBoxx high-yield corporate bond ETF"},
+        {"ticker": "SPY", "role": "market"}
       ]
     },
     {
@@ -27,6 +38,18 @@
         "First Brands Group",
         "First Brands Group debt refinancing",
         "First Brands invoice financing factoring"
+      ],
+      "proxies": [
+        {"ticker": "JEF", "role": "exposed_lender", "vs": "XLF", "note": "Jefferies: Point Bonita fund bought First Brands receivables"},
+        {"ticker": "UBS", "role": "exposed_lender", "vs": "XLF", "relevance": 0.6, "note": "UBS: funds exposed to First Brands invoice finance (ADR); large balance sheet dilutes it"},
+        {"ticker": "AAP", "role": "customer", "note": "Advance Auto Parts"},
+        {"ticker": "AZO", "role": "customer", "note": "AutoZone"},
+        {"ticker": "ORLY", "role": "customer", "note": "O'Reilly Automotive"},
+        {"ticker": "DORM", "role": "peer", "note": "Dorman Products: auto-parts supplier"},
+        {"ticker": "XLF", "role": "sector_etf", "note": "Financial Select Sector SPDR"},
+        {"ticker": "HYG", "role": "credit", "note": "iShares iBoxx high-yield corporate bond ETF"},
+        {"ticker": "JNK", "role": "credit", "note": "SPDR Bloomberg high-yield bond ETF"},
+        {"ticker": "SPY", "role": "market"}
       ]
     }
   ],

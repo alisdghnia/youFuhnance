@@ -6,7 +6,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-DB_PATH = Path(os.environ.get("YOUFIN_DB", DATA_DIR / "youfin.db"))
 PORTFOLIO_PATH = DATA_DIR / "portfolio.json"
 
 
@@ -26,11 +25,13 @@ def _load_dotenv() -> None:
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
-        key, _, value = line.partition("=")
+        key, _, value = line.removeprefix("export ").partition("=")
         os.environ.setdefault(key.strip(), value.strip().strip("'\""))
 
 
 _load_dotenv()
+# After the .env load, so YOUFIN_DB set there is honoured like the other settings.
+DB_PATH = Path(os.environ.get("YOUFIN_DB") or DATA_DIR / "youfin.db")
 
 
 def you_api_key() -> str:

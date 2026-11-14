@@ -10,12 +10,13 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
 from urllib.parse import urlparse
 
 from ..risk_tags import tag
-from ..youcom import YouClient
+from ..youcom import YouClient, YouComError
 
 # Low-signal sites that match company names but carry no credit information.
 JUNK_DOMAINS = [
@@ -24,6 +25,9 @@ JUNK_DOMAINS = [
     "ziprecruiter.com", "simplyhired.com", "wayup.com", "jobs.thetrucker.com", "dnb.com",
 ]
 JOB_POST = re.compile(r"\bhiring\b|\bjobs?\b|\bcareers?\b|\btechnician\b|\bspecialist\b", re.I)
+# "cuts 500 jobs" is a credit signal, not a job posting.
+JOB_LOSS = re.compile(r"\b(cut|cuts|cutting|slash\w*|shed\w*|axe[sd]?|eliminat\w*|los(e|es|ing|t|s))\b"
+                      r"|layoff|lays? off|furlough", re.I)
 
 
 def matches(text: str, aliases: list[str], context: list[str]) -> bool:
@@ -49,7 +53,7 @@ class NewSignal:
 
 def score(text: str, domain: str) -> tuple[int, list[str], list[str]]:
     severity, tags, terms = tag(text)
-    if domain.endswith("sec.gov"):
+    if domain == "sec.gov" or domain.endswith(".sec.gov"):
         # A regulatory filing that names our counterparty is never just 'info'.
         tags.append("sec_filing")
         severity = max(severity, 3)
@@ -90,6 +94,7 @@ class Scout:
         self.conn = conn
         self.client = client  # created lazily so --from-db replays need no API key
         self.bus = bus
+        self.errors: list[str] = []  # searches / fetches that failed (their results are missing)
 
     def _client(self) -> YouClient:
         if self.client is None:
@@ -138,9 +143,17 @@ class Scout:
             aliases = [a.lower() for a in json.loads(cp["aliases"])]
             context = [c.lower() for c in json.loads(cp["context"] or "[]")]
             for query in json.loads(cp["queries"]):
-                results = self._client().search(
-                    query, count=20, freshness=freshness, exclude_domains=JUNK_DOMAINS
-                )
+                try:
+                    results = self._client().search(
+                        query, count=20, freshness=freshness, exclude_domains=JUNK_DOMAINS
+                    )
+                except YouComError as e:
+                    # One failed query must not abort a long replay, but it must be visible:
+                    # this window has a gap until the sweep is re-run.
+                    self.errors.append(f"{as_of} {cp['id']} search {query!r}: {e}")
+                    print(f"[scout] WARNING search failed, results missing: {self.errors[-1]}",
+                          file=sys.stderr)
+                    continue
                 kept = 0
                 cur = self.conn.execute(
                     "INSERT INTO scout_runs (mode, as_of, counterparty_id, query, freshness, n_results) "
@@ -169,7 +182,7 @@ class Scout:
         text = " ".join([title, r.get("description") or "", *snippets])
         if not matches(text, aliases, context):
             return None  # off-target hit (namesake, plant, flag, ...)
-        if JOB_POST.search(title):
+        if JOB_POST.search(title) and not JOB_LOSS.search(title):
             return None  # job postings
 
         pub = _pub_date(r.get("page_age"))
@@ -178,7 +191,10 @@ class Scout:
         if pub is not None and pub < start:
             return None  # stale page that slipped past the freshness filter
 
-        domain = urlparse(url).netloc.removeprefix("www.")
+        domain = urlparse(url).netloc.lower().removeprefix("www.")
+        if self.conn.execute("SELECT 1 FROM signals WHERE counterparty_id=? AND url=?",
+                             (cp_id, url)).fetchone():
+            return None  # already seen in an earlier sweep (skip before any archive lookup)
         self.conn.execute(
             "INSERT OR IGNORE INTO articles (url, title, description, snippets, page_age, domain) "
             "VALUES (?,?,?,?,?,?)",
@@ -211,16 +227,20 @@ class Scout:
     def retag(self, as_of_replay: bool = False) -> int:
         """Re-score stored signals with the current rules (no You.com calls).
 
-        as_of_replay: score each signal on the text that existed on its first_seen_as_of
-        (Wayback snapshot, else title + description) instead of today's snippets."""
+        Signals collected by a replay are always re-scored on the text that existed on
+        their first_seen_as_of (Wayback snapshot, else title + description): scoring them
+        on today's snippets would put hindsight back into the replay. Signals from live
+        sweeps use today's snippets. as_of_replay forces as-of scoring for every signal."""
         rows = self.conn.execute(
-            "SELECT s.id, s.url, s.first_seen_as_of, a.title, a.description, a.snippets, a.domain "
-            "FROM signals s JOIN articles a USING (url)"
+            "SELECT s.id, s.url, s.first_seen_as_of, s.score_basis, r.mode, a.title, "
+            "a.description, a.snippets, a.domain "
+            "FROM signals s JOIN articles a USING (url) LEFT JOIN scout_runs r ON r.id = s.run_id"
         ).fetchall()
         for r in rows:
             text = " ".join([r["title"] or "", r["description"] or "",
                              *json.loads(r["snippets"] or "[]")])
-            if as_of_replay:
+            replayed = r["mode"] == "replay" or r["score_basis"] in ("snapshot", "title_desc")
+            if as_of_replay or replayed:
                 severity, tags, terms, basis, _ = score_as_of(
                     r["title"] or "", r["description"] or "", text, r["domain"] or "",
                     r["url"], r["first_seen_as_of"], self._archive())
@@ -237,10 +257,21 @@ class Scout:
     def _fetch_full_text(self, signals: list[NewSignal]) -> None:
         urls = sorted({s.url for s in signals})
         for i in range(0, len(urls), 10):
-            for page in self._client().contents(urls[i:i + 10]):
-                if page.get("markdown"):
-                    self.conn.execute(
-                        "UPDATE articles SET markdown=?, fetched_at=datetime('now') WHERE url=?",
-                        (page["markdown"], page.get("url")),
-                    )
+            batch = urls[i:i + 10]
+            try:
+                pages = self._client().contents(batch)
+            except YouComError as e:  # full text is optional: keep the signals, report the gap
+                self.errors.append(f"contents ({len(batch)} pages): {e}")
+                print(f"[scout] WARNING full-text fetch failed: {e}", file=sys.stderr)
+                continue
+            for n, page in enumerate(pages):
+                if not page.get("markdown"):
+                    continue
+                url = page.get("url")
+                if url not in batch and len(pages) == len(batch):
+                    url = batch[n]  # the API echoed a normalised/redirected URL
+                self.conn.execute(
+                    "UPDATE articles SET markdown=?, fetched_at=datetime('now') WHERE url=?",
+                    (page["markdown"], url),
+                )
         self.conn.commit()
