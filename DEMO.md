@@ -19,11 +19,15 @@ python3 scripts/brief.py --as-of 2025-09-07 --counterparty tricolor --db path/to
 - Header cards: the two lead-time numbers.
 - Counterparty selector: Tricolor, then First Brands.
 - Slider (or Play): Sep 2 (First Brands ALERT) -> Sep 6 watch -> Sep 7 Tricolor ALERT -> Sep 9 -> Sep 10 filing -> Sep 20-25.
-- Timeline strip: first WATCH, first ALERT, market break, filing.
-- Event cards: tier chips, quotes, source links. Feed: who -> topic. Chart at bottom: the market study.
+- Timeline strip: first WATCH, first ALERT, market break, filing (each appears only once the slider reaches it).
+- Evidence charts under the controls move with the slider (future is blank): abnormal return per proxy, open/closing/closed heatmap, Markov/BOCPD probabilities, news pins (hover: headline, verdict, tier, receipt quote). Try Tricolor Sep 5 -> 7 -> 10 and First Brands Sep 2 -> 22.
+- "Today for the team": what changed since yesterday + 2-4 rule-based discussion prompts, each with its evidence.
+- Play (speed 0.5x-4x), Space = play/pause, left/right arrows = step a day. Deep link: `dashboard.html#cp=tricolor&d=2025-09-07`.
+- Event cards: tier chips, quotes, source links. Feed: who -> topic.
 - Theme button toggles dark/light.
 
 ## Honest caveats
+- **Replay integrity:** pretrained models' cutoffs predate the events and no model is ever trained on our data; `python3 scripts/leak_check.py` deletes everything dated after D from a DB copy and proves market, covenant, brief and dashboard outputs for D are identical (PASS on Tricolor Sep 5/7, First Brands Sep 2/19).
 - The portfolio is **hypothetical**; counterparties are real public companies, positions/sizes/terms are invented.
 - **Replay integrity:** sources are scored on as-of text (Wayback snapshots / publish-date filtering), and every panel only uses data dated <= the slider day. Market assessments use only sessions closed before the day. Verdicts shown come from the verification history as of that day.
 - **Proxies were chosen with hindsight** (we knew who was exposed). A live system must pick them before the event.

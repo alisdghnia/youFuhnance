@@ -49,7 +49,15 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;co
 .cav{color:var(--mut);font-size:11.5px}
 .brief{font-size:13px}.brief h2.mdh{font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);margin:10px 0 4px}.brief ul{margin:2px 0 6px 18px;padding:0}.brief blockquote{margin:2px 0 2px 6px;padding-left:8px;border-left:3px solid var(--line);color:var(--mut)}
 .empty{color:var(--mut)}
-img.chart{width:100%;border-radius:8px;border:1px solid var(--line);background:#fff}
+#cwrap{position:relative}#chart{width:100%;height:auto;display:block}
+#chart text{font-family:inherit;fill:var(--mut);font-size:10.5px}#chart .tt{fill:var(--ink);font-weight:600}
+.ptip{position:absolute;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:9;display:none}
+.ptip .q{margin-top:4px}
+.asof{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:12.5px}
+.team ul{margin:2px 0 8px 18px;padding:0}.team li{margin:3px 0}.team .ev2{color:var(--mut);font-size:11.5px}
+.team ol{margin:4px 0 0 18px;padding:0}.team ol li{margin:8px 0}
+.team h3{font-size:12px;margin:8px 0 2px;color:var(--ink)}
+:root{--wo:#2a9d6f;--wc:#e0a800;--wx:#d1453b}
 .pos{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0}
 .foot{color:var(--mut);margin-top:24px;font-size:12px;text-align:center}
 </style>
@@ -67,14 +75,17 @@ img.chart{width:100%;border-radius:8px;border:1px solid var(--line);background:#
     <div class="ctlrow">
       <label>Counterparty <select id="cp"></select></label>
       <span class="date" id="date"></span>
-      <button id="prev">◀</button><button id="play">Play ▶</button><button id="next">▶</button>
+      <button id="prev" title="Left arrow">◀</button><button id="play" title="Space">Play ▶</button><button id="next" title="Right arrow">▶</button><select id="speed" title="Play speed"><option value="2200">0.5x</option><option value="1100" selected>1x</option><option value="550">2x</option><option value="275">4x</option></select>
       <input type="range" id="slider" min="0" value="0">
     </div>
     <div class="tl" id="tl"></div>
   </div>
 
+  <div class="card" style="margin-top:6px"><h2>What the market and the news showed on this day (as-of; future is blank)</h2><div class="asof" id="asof"></div><div id="cwrap"><svg id="chart" role="img" aria-label="market evidence charts"></svg><div class="ptip" id="ptip"></div></div></div>
+
   <div class="grid">
     <div class="col">
+      <div class="card team"><h2>Today for the team</h2><div id="team"></div></div>
       <div class="card"><h2>Events as of this day</h2><div id="events"></div></div>
       <div class="card"><h2>Agent message feed (who → topic)</h2><div class="feed" id="feed"></div></div>
     </div>
@@ -85,7 +96,6 @@ img.chart{width:100%;border-radius:8px;border:1px solid var(--line);background:#
       <div class="card"><h2>Action brief</h2><div class="brief" id="brief"></div></div>
     </div>
   </div>
-  <div class="card" style="margin-top:14px"><h2>Market study (proxy abnormal returns, regime breaks vs our alert)</h2><img class="chart" id="chart" alt="market study chart"></div>
   <p class="foot" id="foot"></p>
 </div>
 <script id="payload" type="application/json">__DATA__</script>
@@ -120,7 +130,7 @@ function heads() {
   $('heads').innerHTML = Object.entries(D.cps).map(([id, c]) => {
     const m = c.marks;
     const lead = m.lead_days_to_filing, ls = m.lead_sessions;
-    return `<div class="card"><h2>${esc(c.name)}</h2><div class="big">
+    return `<div class="card"><h2>${esc(c.name)} · result in hindsight</h2><div class="big">
       <div><div class="num">${lead ?? '–'}<small> days</small></div><div class="lbl">first verified ALERT ${m.first_alert ? fmtD(m.first_alert) : '–'} → filing ${m.filing ? fmtD(m.filing) : '–'}</div></div>
       <div><div class="num">${ls != null ? '+' + ls : '–'}<small> sessions</small></div><div class="lbl">ALERT → first market-proxy break${m.break_ticker ? ' (' + esc(m.break_ticker) + ', ' + fmtD(m.market_break) + ')' : ''}</div></div>
       </div></div>`;
@@ -128,19 +138,128 @@ function heads() {
 }
 
 function timeline() {
-  const c = D.cps[cp], m = c.marks, dates = D.dates;
+  const c = D.cps[cp], m = c.marks || {}, dates = D.dates, cur = dates[idx];
   const t = s => new Date(s + 'T00:00:00').getTime();
-  const marks = [['First WATCH', m.first_watch, 'var(--warn)'], ['First verified ALERT', m.first_alert, 'var(--bad)'],
-                 ['Market break', m.market_break, 'var(--acc)'], ['Filing', m.filing, 'var(--ink)']].filter(x => x[1]);
-  const lo = t(dates[0]), hi = Math.max(t(dates[dates.length - 1]), ...marks.map(x => t(x[1])));
+  // only marks the team could know on this day (no spoilers); same-date marks share one marker and one label
+  const raw = [['First WATCH', m.first_watch, 'var(--warn)', m.first_watch && m.first_watch <= cur], ['First verified ALERT', m.first_alert, 'var(--bad)', m.first_alert && m.first_alert <= cur],
+               ['Market break', m.market_break, 'var(--acc)', m.market_break && m.market_break < cur], ['Filing', m.filing, 'var(--ink)', m.filing && m.filing <= cur]].filter(x => x[1] && x[3]);
+  const groups = {};
+  raw.forEach(x => (groups[x[1]] = groups[x[1]] || []).push(x));
+  const gs = Object.entries(groups).sort((a, b) => a[0] < b[0] ? -1 : 1);
+  const lo = t(dates[0]), hi = t(dates[dates.length - 1]);
   const pos = s => ((t(s) - lo) / (hi - lo)) * 100;
-  let h = `<div class="axis"></div><div class="fill" style="width:${pos(dates[idx])}%"></div><div class="cur" style="left:${pos(dates[idx])}%"></div>`;
-  marks.forEach(([n, d, col], i) => {
-    const up = i % 2 === 1;
-    h += `<div class="mk ${up ? 'up' : ''}" style="left:${pos(d)}%">${up ? `<b>${n}</b> ${fmtD(d)}<i style="background:${col}"></i>` : `<i style="background:${col}"></i><b>${n}</b> ${fmtD(d)}`}</div>`;
+  let h = `<div class="axis"></div><div class="fill" style="width:${pos(cur)}%"></div><div class="cur" style="left:${pos(cur)}%"></div>`;
+  gs.forEach(([d, g], i) => {
+    const up = i % 2 === 1, cols = g.map(x => x[2]);
+    const bg = cols.length > 1 ? `linear-gradient(90deg,${cols[0]} 50%,${cols[1]} 50%)` : cols[0];
+    const label = `<b>${g.map(x => x[0]).join(' + ')}</b> ${fmtD(d)}`;
+    h += `<div class="mk ${up ? 'up' : ''}" style="left:${Math.min(pos(d), 92)}%">${up ? `${label}<i style="background:${bg}"></i>` : `<i style="background:${bg}"></i>${label}`}</div>`;
   });
   h += `<div class="mk" style="left:0;transform:none;top:46px">${fmtD(dates[0])}</div>`;
   $('tl').innerHTML = h;
+}
+
+// ------------------------------------------------------------ evidence charts (inline SVG, as-of only)
+const SER = ['#3b5bdb', '#e8590c', '#2b8a3e', '#9c36b5', '#0c8599', '#c2255c'];
+const WCOL = {open: 'var(--wo)', closing: 'var(--wc)', closed: 'var(--wx)'};
+function nextTradingDate(ms, i) { return ms.dates[i + 1] || null; }
+function chartSvg() {
+  const c = D.cps[cp], ms = c.ms, d = D.dates[idx], svg = $('chart');
+  if (!ms) { svg.setAttribute('viewBox', '0 0 1000 40'); svg.innerHTML = '<text x="10" y="24">No market data in this database.</text>'; $('asof').innerHTML = ''; return; }
+  const W = 1000, L = 74, R = 64, t = s => new Date(s + 'T00:00:00').getTime(), DAY = 864e5;
+  const t0 = t(D.dates[0]), t1 = t(D.dates[D.dates.length - 1]) + DAY;
+  const X = s => L + (t(s) - t0) / (t1 - t0) * (W - L - R), xT = X(d);
+  const vis = []; ms.dates.forEach((x, i) => { if (x < d) vis.push(i); });      // sessions that closed before today only
+  const direct = ms.tickers.filter(x => x.direct), ctx = ms.tickers.filter(x => x.ctx);
+  const marks = [];
+  const m = c.marks || {};
+  const first = (k) => c.pins.filter(p => p.d <= d && p.level === k).map(p => p.d).sort()[0];
+  const fw = first('watch') || first('ALERT'), fa = first('ALERT');
+  if (fw && (!fa || fw < fa)) marks.push(['first WATCH', fw, 'var(--warn)', '']);
+  if (fa) marks.push(['first verified ALERT', fa, 'var(--bad)', '']);
+  if (m.filing && m.filing <= d) marks.push(['filing', m.filing, 'var(--ink)', '4 3']);
+  if (m.market_break && m.market_break < d) marks.push(['market break (' + m.break_ticker + ')', m.market_break, 'var(--acc)', '2 3']);
+  // geometry
+  const yLab = 0, yPin = 40, pPin = 34, y1 = 82, h1 = 190, h2row = 15, y2 = y1 + h1 + 36, h2 = (direct.length + 1) * h2row, y3 = y2 + h2 + 44, h3 = 100, H = y3 + h3 + 26;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let o = '';
+  // week grid + axis labels
+  const mondays = []; for (let q = 0; q < D.dates.length; q++) if (new Date(D.dates[q] + 'T00:00:00').getDay() === 1 || q === 0) mondays.push(D.dates[q]);
+  mondays.forEach(x => { o += `<line x1="${X(x)}" x2="${X(x)}" y1="${y1}" y2="${y3 + h3}" stroke="var(--line)" stroke-width="1"/><text x="${X(x)}" y="${y3 + h3 + 16}" text-anchor="middle">${fmtD(x)}</text>`; });
+  // 1) cumulative abnormal return
+  let lo = 0, hi = 0;
+  ms.tickers.forEach(x => vis.forEach(i => { const v = ms.car[x.t][i]; if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }));
+  const pad = Math.max(1, (hi - lo) * .08); lo -= pad; hi += pad;
+  const Y1 = v => y1 + (hi - v) / (hi - lo) * h1;
+  o += `<text class="tt" x="${L}" y="${y1 - 8}">Cumulative abnormal return vs SPY since Aug 25 (%)</text>`;
+  const step = (hi - lo) > 12 ? 5 : (hi - lo) > 5 ? 2 : 1;
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) o += `<line x1="${L}" x2="${W - R}" y1="${Y1(v)}" y2="${Y1(v)}" stroke="${v === 0 ? 'var(--mut)' : 'var(--line)'}" stroke-width="${v === 0 ? 1 : .6}"/><text x="${L - 6}" y="${Y1(v) + 3}" text-anchor="end">${v}</text>`;
+  const line = (tk, col, w, dash) => { const pts = vis.filter(i => ms.car[tk][i] != null).map(i => `${X(ms.dates[i]).toFixed(1)},${Y1(ms.car[tk][i]).toFixed(1)}`); return pts.length ? `<polyline fill="none" stroke="${col}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} points="${pts.join(' ')}"/>` : ''; };
+  ctx.forEach(x => { o += line(x.t, 'var(--mut)', 1.2, '4 3'); });
+  const ends = [];
+  direct.forEach((x, k) => { o += line(x.t, SER[k % SER.length], 2); const i = vis[vis.length - 1]; if (i != null && ms.car[x.t][i] != null) ends.push([Y1(ms.car[x.t][i]), x.t, SER[k % SER.length], X(ms.dates[i])]); });
+  ends.sort((a, b) => a[0] - b[0]); let yp = -1e9;
+  ends.forEach(([y, tk, col, xe]) => { const yl = Math.max(y, yp + 11); yp = yl; o += `<circle cx="${xe}" cy="${y}" r="3" fill="${col}"/><text x="${xe + 6}" y="${yl + 3}" style="fill:${col};font-weight:700">${esc(tk)}</text>`; });
+  o += `<text x="${W - R}" y="${y1 - 8}" text-anchor="end">dashed grey: ${ctx.map(x => esc(x.t)).join(', ')}</text>`;
+  // 2) window heatmap
+  o += `<text class="tt" x="${L}" y="${y2 - 8}">Action window per proxy, as computed with closes before each day (green open, amber closing, red closed)</text>`;
+  const rows = direct.map(x => [x.t, ms.lab[x.t]]).concat([['OVERALL', ms.win]]);
+  rows.forEach(([nm, arr], r) => {
+    o += `<text x="${L - 6}" y="${y2 + r * h2row + 11}" text-anchor="end" ${nm === 'OVERALL' ? 'class="tt"' : ''}>${esc(nm)}</text>`;
+    vis.forEach(i => {
+      const x0 = X(ms.dates[i]), nx = ms.dates[i + 1], x1 = Math.min(nx ? X(nx) : xT, xT);
+      const lab = arr[i]; if (!lab || lab === 'n/a' || x1 <= x0) return;
+      o += `<rect x="${x0}" y="${y2 + r * h2row + 1}" width="${x1 - x0}" height="${h2row - 2}" fill="${WCOL[lab] || 'var(--line)'}"/>`;
+    });
+  });
+  // 3) probabilities
+  o += `<text class="tt" x="${L}" y="${y3 - 24}">Regime probabilities (each day: fit on closes up to that day)</text>`;
+  const Y3 = v => y3 + (1 - v) * h3;
+  [0, .5, 1].forEach(v => { o += `<line x1="${L}" x2="${W - R}" y1="${Y3(v)}" y2="${Y3(v)}" stroke="var(--line)" stroke-width="${v === .5 ? 1 : .6}" ${v === .5 ? 'stroke-dasharray="4 3"' : ''}/><text x="${L - 6}" y="${Y3(v) + 3}" text-anchor="end">${v}</text>`; });
+  const pl = (arr, col, w, dash, fill) => { const pts = vis.filter(i => arr[i] != null).map(i => [X(ms.dates[i]), Y3(arr[i])]); if (!pts.length) return ''; const pt = pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
+    return (fill ? `<polygon points="${pts[0][0]},${Y3(0)} ${pt} ${pts[pts.length - 1][0]},${Y3(0)}" fill="${col}" opacity=".13"/>` : '') + `<polyline fill="none" stroke="${col}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} points="${pt}"/>`; };
+  o += pl(ms.ps, SER[0], 2, '', true) + pl(ms.bocpd, SER[1], 2) + pl(ms.bmax, SER[3], 1.3, '2 2');
+  o += `<g font-size="10"><rect x="${L}" y="${y3 + h3 + 4}" width="0" height="0"/></g>`;
+  o += `<text x="${L + 4}" y="${y3 - 8}" style="fill:${SER[0]};font-weight:600">basket P(stress), Markov filtered</text><text x="${L + 220}" y="${y3 - 8}" style="fill:${SER[1]};font-weight:600">basket BOCPD</text><text x="${L + 310}" y="${y3 - 8}" style="fill:${SER[3]};font-weight:600">max BOCPD, direct proxies</text>`;
+  // future region
+  o += `<rect x="${xT}" y="${y1 - 14}" width="${W - R - xT}" height="${y3 + h3 - y1 + 14}" fill="var(--bg)" opacity=".75"/><text x="${Math.min(xT + 8, W - R - 120)}" y="${y1 + 14}" style="font-style:italic">future: not yet known</text>`;
+  // vertical markers + non-overlapping labels
+  const lanes = [-1e9, -1e9, -1e9];
+  const all = marks.map(x => ({n: x[0], d: x[1], col: x[2], da: x[3]})).concat([{n: 'today', d, col: 'var(--ink)', da: '', today: true}]).sort((a, b) => X(a.d) - X(b.d));
+  all.forEach(mk => {
+    const x = X(mk.d), w = (mk.n.length + 7) * 5.6; let ln = lanes.findIndex(e => e + 6 < x);
+    if (ln < 0) ln = lanes.indexOf(Math.min(...lanes)); lanes[ln] = x + w;
+    o += `<line x1="${x}" x2="${x}" y1="${yLab + ln * 12 + 8}" y2="${y3 + h3}" stroke="${mk.col}" stroke-width="${mk.today ? 2 : 1.4}" ${mk.da ? `stroke-dasharray="${mk.da}"` : ''}/><text x="${x + 3}" y="${yLab + ln * 12 + 8}" style="fill:${mk.col};font-weight:700">${esc(mk.n)} ${mk.today ? '' : fmtD(mk.d)}</text>`;
+  });
+  // news pins
+  o += `<text x="${L - 6}" y="${yPin + 12}" text-anchor="end">news</text><line x1="${L}" x2="${W - R}" y1="${yPin + pPin + 4}" y2="${yPin + pPin + 4}" stroke="var(--line)"/>`;
+  const slot = {};
+  c.pins.forEach((p, k) => {
+    if (p.d > d) return;
+    const n = slot[p.d] = (slot[p.d] || 0) + 1, x = X(p.d) + (n > 2 ? (n - 2) * 9 : 0), y = yPin + 8 + ((n - 1) % 2) * 15;
+    const col = p.level === 'ALERT' ? 'var(--bad)' : p.level === 'watch' ? 'var(--warn)' : 'var(--mut)', r = p.level === 'ALERT' ? 7 : p.level === 'watch' ? 6 : 4;
+    o += `<g data-pin="${k}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="${r + 3}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="var(--card)" stroke-width="1.5"/>${p.kind === 'escalated' ? `<circle cx="${x}" cy="${y}" r="${r + 2.5}" fill="none" stroke="${col}" stroke-width="1"/>` : ''}</g>`;
+  });
+  svg.innerHTML = o;
+  // as-of readout
+  const i = vis[vis.length - 1];
+  $('asof').innerHTML = i == null ? '<span class="empty">No market close before this day yet.</span>' :
+    `<span>Latest close used: <b>${fmtD(ms.dates[i])}</b></span>${winBadge(ms.win[i])}<span class="cav">basket P(stress) ${ms.ps[i] == null ? 'n/a' : ms.ps[i].toFixed(2)} · BOCPD ${ms.bocpd[i] == null ? 'n/a' : ms.bocpd[i].toFixed(2)}</span>` +
+    direct.map(x => `<span class="badge ${ms.lab[x.t][i] === 'closed' ? 'b-bad' : ms.lab[x.t][i] === 'closing' ? 'b-warn' : 'b-ok'}">${esc(x.t)} ${esc(ms.lab[x.t][i] || 'n/a')}</span>`).join('');
+}
+function pinTip(e) {
+  const g = e.target.closest && e.target.closest('[data-pin]'), tip = $('ptip');
+  if (!g) { tip.style.display = 'none'; return; }
+  const p = D.cps[cp].pins[+g.dataset.pin];
+  tip.innerHTML = `<b>${esc(p.headline)}</b><div style="margin-top:3px">${lvlBadge(p.level)} ${verdictBadge(p.verdict)} <span class="cav">${esc(p.kind === 'seen' ? 'first seen' : p.kind)} ${fmtD(p.d)}</span></div>
+    ${p.src ? `<div class="cav" style="margin-top:3px"><span class="chip t${p.tier}">T${p.tier} ${esc(p.tier_name)}</span> ${esc(p.src)}</div>` : ''}${p.quote ? `<div class="q">“${esc(p.quote)}”</div>` : ''}`;
+  const r = $('cwrap').getBoundingClientRect(); tip.style.display = 'block';
+  tip.style.left = Math.max(0, Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth)) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px';
+}
+function teamPanel(day) {
+  const T = day.team;
+  $('team').innerHTML = `<h3>What changed since yesterday</h3>` + (T.changes.length ? `<ul>${T.changes.map(x => `<li>${esc(x.text)} <span class="ev2">[${esc(x.evidence)}]</span></li>`).join('')}</ul>` : '<div class="empty" style="margin-bottom:6px">No new verified event, window flip or market trigger.</div>') +
+    `<h3>For discussion</h3><ol>${T.prompts.map(x => `<li>${esc(x.text)}<div class="ev2">Evidence: ${esc(x.evidence)}</div></li>`).join('')}</ol><div class="cav" style="margin-top:6px">Rule-based from the data above, no LLM. Analysis, not advice.</div>`;
 }
 
 function render() {
@@ -162,12 +281,8 @@ function render() {
   if (!m) $('market').innerHTML = '<div class="empty">No market data in this database.</div>';
   else if (m.error || !m.window) $('market').innerHTML = `<div class="empty">${esc(m.error || 'n/a')}</div>`;
   else {
-    const series = D.dates.slice(0, idx + 1).map(x => c.days[x].market && c.days[x].market.p_stress);
-    const pts = series.map((v, i) => v == null ? null : `${(i / Math.max(D.dates.length - 1, 1) * 300).toFixed(1)},${(40 - v * 40).toFixed(1)}`).filter(Boolean).join(' ');
     $('market').innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${winBadge(m.window)}<span class="cav">last close used ${esc(m.bar_date)} · basket P(stress) ${m.p_stress == null ? 'n/a' : m.p_stress.toFixed(2)}</span></div>
       <div class="cav" style="margin:6px 0">${esc((m.drivers || []).join('; '))}</div>
-      <svg viewBox="0 0 300 44" width="100%" height="44" preserveAspectRatio="none" aria-label="basket P(stress) to date"><line x1="0" y1="20" x2="300" y2="20" stroke="var(--line)" stroke-dasharray="3"/><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="${pts}"/></svg>
-      <div class="cav">basket P(stress), Aug 25 → this day (dashed = 0.5)</div>
       ${m.moving && m.moving.length ? `<div style="margin:6px 0">${m.moving.map(x => `<span class="badge ${x.label === 'closed' ? 'b-bad' : 'b-warn'}">${esc(x.ticker)} ${esc(x.label)}</span>`).join(' ')}</div>` : ''}
       <table><tr><th>Hedge candidate</th><th>Role</th><th>Score</th><th>Proxy</th></tr>${m.hedges.map(h => `<tr><td><b>${esc(h.ticker)}</b></td><td>${esc(h.role)}</td><td>${h.score.toFixed(2)}</td><td>${esc(h.label)}</td></tr><tr><td colspan="4" class="cav" style="border:0;padding-top:0">${esc(h.caveat)}</td></tr>`).join('')}</table>
       <div class="cav" style="margin-top:6px">Analysis, not a trade instruction; compliance/MNPI check first.</div>`;
@@ -177,20 +292,34 @@ function render() {
   // actions
   $('actions').innerHTML = day.actions.length ? day.actions.map(a => `<div style="padding:4px 0;border-top:1px solid var(--line)"><span class="badge b-neu">${esc(a.sender)}</span> ${a.today ? '<span class="badge b-bad">NEW</span> ' : ''}${a.stage ? `<span class="badge b-warn">${esc(a.stage)}</span> ` : ''}<span class="cav">${esc(a.as_of)}</span><div>${esc(a.summary)}</div></div>`).join('') : '<div class="empty">No desk actions yet.</div>';
   $('brief').innerHTML = mdLite(day.brief);
-  if (c.chart) { $('chart').src = 'data:image/png;base64,' + c.chart; $('chart').style.display = ''; } else $('chart').style.display = 'none';
+  teamPanel(day); chartSvg();
 }
 
 function go(i) { idx = Math.max(0, Math.min(D.dates.length - 1, i)); render(); }
-function stop() { if (timer) { clearInterval(timer); timer = null; $('play').textContent = 'Play ▶'; } }
 $('cp').innerHTML = Object.entries(D.cps).map(([id, c]) => `<option value="${id}">${esc(c.name)}</option>`).join('');
 $('cp').onchange = e => { cp = e.target.value; render(); };
 $('slider').max = D.dates.length - 1;
 $('slider').oninput = e => { stop(); go(+e.target.value); };
 $('prev').onclick = () => { stop(); go(idx - 1); };
 $('next').onclick = () => { stop(); go(idx + 1); };
-$('play').onclick = () => { if (timer) return stop(); if (idx >= D.dates.length - 1) idx = 0; $('play').textContent = 'Pause ❚❚'; timer = setInterval(() => { if (idx >= D.dates.length - 1) return stop(); go(idx + 1); }, 1100); };
+function tick() {
+  if (idx >= D.dates.length - 1) return stop();
+  go(idx + 1);
+  const dow = new Date(D.dates[idx] + 'T00:00:00').getDay();      // weekends fast-forward: one trading day per beat
+  timer = setTimeout(tick, +$('speed').value / (dow === 6 || dow === 0 ? 3 : 1));
+}
+function stop() { if (timer) { clearTimeout(timer); timer = null; } $('play').textContent = 'Play ▶'; }
+$('play').onclick = () => { if (timer) return stop(); if (idx >= D.dates.length - 1) idx = 0; $('play').textContent = 'Pause ❚❚'; timer = setTimeout(tick, +$('speed').value); };
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(idx + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(idx - 1); }
+  else if (e.key === ' ' && e.target.tagName !== 'BUTTON') { e.preventDefault(); $('play').click(); }
+});
+$('chart').addEventListener('mousemove', pinTip); $('chart').addEventListener('mouseleave', () => { $('ptip').style.display = 'none'; });
 $('theme').onclick = () => { const r = document.documentElement, dark = getComputedStyle(r).getPropertyValue('--bg').trim() === '#0e1116'; r.dataset.theme = dark ? 'light' : 'dark'; };
 $('foot').textContent = D.disclaimer + ' Hypothetical portfolio; market proxies were chosen with hindsight.';
+(function () { const h = new URLSearchParams(location.hash.slice(1)); if (h.get('cp') && D.cps[h.get('cp')]) { cp = h.get('cp'); $('cp').value = cp; } if (h.get('d') && D.dates.includes(h.get('d'))) idx = D.dates.indexOf(h.get('d')); })();
 heads(); render();
 </script>
 </body>
