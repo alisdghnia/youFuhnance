@@ -23,6 +23,8 @@ TIER3 = {
     "indiapodcast.com", "stockinvest.us", "newsminimalist.com", "youtube.com", "x.com",
     "twitter.com", "threads.com", "threads.net", "reddit.com", "linkedin.com", "medium.com",
     "fullavantenews.com", "indexbox.io", "archive.ph", "news.futunn.com", "futunn.com",
+    "wikipedia.org", "grokipedia.com", "whobrands.com", "macroaxis.com", "crunchbase.com",
+    "companiesmarketcap.com", "stockanalysis.com", "marketscreener.com",
 }
 
 # Outlets that syndicate each other: count them once.

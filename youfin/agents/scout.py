@@ -23,7 +23,16 @@ JUNK_DOMAINS = [
     "trustpilot.com", "seamless.ai", "zoominfo.com", "rocketreach.co", "glassdoor.com",
     "indeed.com", "yelp.com", "bbb.org", "facebook.com", "instagram.com", "tiktok.com",
     "ziprecruiter.com", "simplyhired.com", "wayup.com", "jobs.thetrucker.com", "dnb.com",
+    # encyclopedia / profile / stock-quote pages: retrospective or boilerplate, never news
+    "wikipedia.org", "grokipedia.com", "whobrands.com", "macroaxis.com", "britannica.com",
+    "fandom.com", "crunchbase.com", "companiesmarketcap.com", "stockanalysis.com",
+    "marketscreener.com", "wallstreetzen.com", "simplywall.st", "stocktwits.com",
 ]
+# Stock-quote / profile page titles ("Carvana (CVNA) Price, News, Quote ...").
+QUOTE_PAGE = re.compile(r"price,? (news|quote)|stock (price|quote)|\bquote\b.{0,20}\bhistory\b"
+                        r"|company (profile|overview)|\bwiki\b", re.I)
+PROFILE_SEV_CAP = 1
+PROFILE_DOMAINS = {d for d in JUNK_DOMAINS[JUNK_DOMAINS.index("wikipedia.org"):]}
 JOB_POST = re.compile(r"\bhiring\b|\bjobs?\b|\bcareers?\b|\btechnician\b|\bspecialist\b", re.I)
 # "cuts 500 jobs" is a credit signal, not a job posting.
 JOB_LOSS = re.compile(r"\b(cut|cuts|cutting|slash\w*|shed\w*|axe[sd]?|eliminat\w*|los(e|es|ing|t|s))\b"
@@ -51,8 +60,13 @@ class NewSignal:
     id: int | None = None
 
 
-def score(text: str, domain: str) -> tuple[int, list[str], list[str]]:
-    severity, tags, terms = tag(text)
+def score(text: str, domain: str, pub=None, title: str = "") -> tuple[int, list[str], list[str]]:
+    year = pub.year if hasattr(pub, "year") else (int(str(pub)[:4]) if pub else None)
+    severity, tags, terms = tag(text, year)
+    profile = any(domain == d or domain.endswith("." + d) for d in PROFILE_DOMAINS)
+    if (profile or QUOTE_PAGE.search(title or text[:200])) and severity > PROFILE_SEV_CAP:
+        severity = PROFILE_SEV_CAP
+        tags.append("profile_page")
     if domain == "sec.gov" or domain.endswith(".sec.gov"):
         # A regulatory filing that names our counterparty is never just 'info'.
         tags.append("sec_filing")
@@ -64,7 +78,7 @@ ARCHIVE_MIN_SEVERITY = 3  # only look up the Wayback Machine for signals this se
 
 
 def score_as_of(title: str, description: str, live_text: str, domain: str, url: str,
-                as_of: date | str, archive) -> tuple[int, list[str], list[str], str, str]:
+                as_of: date | str, archive, pub=None) -> tuple[int, list[str], list[str], str, str]:
     """Replay scoring without hindsight. Returns (severity, tags, terms, basis, text).
 
     Today's snippets/markdown/highlights may mention later events, so they are never used.
@@ -72,12 +86,12 @@ def score_as_of(title: str, description: str, live_text: str, domain: str, url: 
     ('snapshot'); otherwise title + description only ('title_desc').
     """
     base = " ".join([title or "", description or ""])
-    if score(live_text, domain)[0] >= ARCHIVE_MIN_SEVERITY:
+    if score(live_text, domain, pub, title)[0] >= ARCHIVE_MIN_SEVERITY:
         snap, _, _ = archive.as_of_text(url, as_of)
         if snap:
             text = " ".join([base, snap])
-            return (*score(text, domain), "snapshot", text)
-    return (*score(base, domain), "title_desc", base)
+            return (*score(text, domain, pub, title), "snapshot", text)
+    return (*score(base, domain, pub, title), "title_desc", base)
 
 
 def _pub_date(page_age: str | None) -> date | None:
@@ -203,9 +217,9 @@ class Scout:
         basis = "live"
         if mode == "replay":
             severity, tags, terms, basis, _ = score_as_of(
-                title, r.get("description") or "", text, domain, url, as_of, self._archive())
+                title, r.get("description") or "", text, domain, url, as_of, self._archive(), pub)
         else:
-            severity, tags, terms = score(text, domain)
+            severity, tags, terms = score(text, domain, pub, title)
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO signals (counterparty_id, url, published_at, first_seen_as_of, "
             "run_id, severity, tags, matched_terms, score_basis) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -233,7 +247,7 @@ class Scout:
         sweeps use today's snippets. as_of_replay forces as-of scoring for every signal."""
         rows = self.conn.execute(
             "SELECT s.id, s.url, s.first_seen_as_of, s.score_basis, r.mode, a.title, "
-            "a.description, a.snippets, a.domain "
+            "a.description, a.snippets, a.domain, s.published_at "
             "FROM signals s JOIN articles a USING (url) LEFT JOIN scout_runs r ON r.id = s.run_id"
         ).fetchall()
         for r in rows:
@@ -243,9 +257,9 @@ class Scout:
             if as_of_replay or replayed:
                 severity, tags, terms, basis, _ = score_as_of(
                     r["title"] or "", r["description"] or "", text, r["domain"] or "",
-                    r["url"], r["first_seen_as_of"], self._archive())
+                    r["url"], r["first_seen_as_of"], self._archive(), r["published_at"])
             else:
-                severity, tags, terms = score(text, r["domain"] or "")
+                severity, tags, terms = score(text, r["domain"] or "", r["published_at"], r["title"] or "")
                 basis = "live"
             self.conn.execute(
                 "UPDATE signals SET severity=?, tags=?, matched_terms=?, score_basis=? WHERE id=?",
