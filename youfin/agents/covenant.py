@@ -224,6 +224,7 @@ def events_as_of(conn: sqlite3.Connection, cp: str, as_of) -> list[EventView]:
                 continue
             srcs.append({"url": r["url"], "domain": r["domain"], "publisher": r["publisher"],
                          "tier": r["tier"], "role": r["role"], "published_at": pub,
+                         "merge_basis": r["merge_basis"] if "merge_basis" in r.keys() else r["role"],
                          "title": r["title"] or "", "quote": r["quote"] or ""})
         if not srcs:
             continue
