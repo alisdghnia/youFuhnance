@@ -58,6 +58,8 @@ def main() -> None:
     ap.add_argument("--step", type=int, default=7)
     ap.add_argument("--daily-from", type=date.fromisoformat)
     ap.add_argument("--event", type=date.fromisoformat, help="credit event date, for lead-time")
+    ap.add_argument("--as-of-replay", action="store_true",
+                    help="retag: score each signal on its Wayback snapshot at first_seen_as_of")
     ap.add_argument("--min-severity", type=int, default=0)
     ap.add_argument("--fetch", type=int, default=None,
                     help="fetch full text (Contents API) for new signals >= this severity")
@@ -68,8 +70,14 @@ def main() -> None:
     cps = args.counterparty or [r["id"] for r in conn.execute("SELECT id FROM counterparties")]
 
     if args.mode == "retag":
-        n = Scout(conn, client=object()).retag()  # no API client needed
+        scout = Scout(conn, client=object())  # no You.com client needed
+        n = scout.retag(as_of_replay=args.as_of_replay)
         print(f"re-scored {n} stored signals")
+        if args.as_of_replay:
+            a = scout.archive
+            print(f"archive.org: {a.requests} requests, {a.lookups} lookups, {a.cache_hits} cache hits")
+            for b, k in conn.execute("SELECT score_basis, COUNT(*) FROM signals GROUP BY 1"):
+                print(f"  score_basis {b}: {k}")
         return
     elif args.mode != "timeline":
         client = YouClient()

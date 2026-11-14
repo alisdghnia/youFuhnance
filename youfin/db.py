@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS event_sources (
     role         TEXT NOT NULL,     -- scout | corroboration
     published_at TEXT,
     quote        TEXT,              -- the receipt: sentence supporting the claim
+    score_basis  TEXT,              -- text the tags were scored on: live | snapshot | title_desc
     PRIMARY KEY (event_id, url)
 );
 
@@ -125,6 +126,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(signals)")}
     if "event_id" not in cols:
         conn.execute("ALTER TABLE signals ADD COLUMN event_id INTEGER REFERENCES events(id)")
+        conn.commit()
+    if "score_basis" not in cols:
+        conn.execute("ALTER TABLE signals ADD COLUMN score_basis TEXT")  # live|snapshot|title_desc
+        conn.commit()
+    ecols = {r[1] for r in conn.execute("PRAGMA table_info(event_sources)")}
+    if "score_basis" not in ecols:
+        conn.execute("ALTER TABLE event_sources ADD COLUMN score_basis TEXT")
         conn.commit()
     cols = {r[1] for r in conn.execute("PRAGMA table_info(articles)")}
     if "highlights" not in cols:

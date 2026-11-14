@@ -130,6 +130,9 @@ def main() -> None:
             print(f"LLM ({j.model}): {j.live_calls} live calls, avg {avg:.1f}s, "
                   f"{j.cache_hits} cache hits, available={j.available}")
         print(f"\nAPI usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
+        a = getattr(v, "archive", None)
+        if a:
+            print(f"archive.org: {a.requests} requests, {a.lookups} lookups, {a.cache_hits} cache hits")
 
     report(conn, cps, events, args.min_level, args.receipts)
 
