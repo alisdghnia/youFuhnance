@@ -286,7 +286,25 @@ def _cite(r: dict) -> str:
     return f"{r['id']} {r['status']}" + (f" [ev{e['event_id']} {e['verdict']}]" if e else "")
 
 
-def stage_of(rows: list[dict]) -> tuple[int, list[str]]:
+PREFILING_WINDOW_DAYS = 30
+PREFILING_TAGS = {"insolvency", "lender_action", "fraud"}
+
+
+def _prefiling_backed(r: dict, as_of: str | None) -> bool:
+    """Stage 3 needs a corroborated insolvency-type event from a tier<=2 source dated in the last
+    ~30 days; stale retrospectives and weak sources cap at stage 2."""
+    if as_of is None:
+        return True
+    lo = (date.fromisoformat(as_of) - timedelta(days=PREFILING_WINDOW_DAYS)).isoformat()
+    for e in r["evidence"]:
+        rc = e["receipt"]
+        if (e["verdict"] in STRONG and rc["tier"] <= 2 and (rc["published_at"] or "")[:10] >= lo
+                and set(e["tags"]) & PREFILING_TAGS and "stale_context" not in e["tags"]):
+            return True
+    return False
+
+
+def stage_of(rows: list[dict], as_of: str | None = None) -> tuple[int, list[str]]:
     likely = [r for r in rows if r["status"] == LIKELY]
     filed = [r for r in likely if r["requires_text"] == "filing"]
     if filed:
@@ -294,6 +312,8 @@ def stage_of(rows: list[dict]) -> tuple[int, list[str]]:
     severe = [r for r in likely if r["severe"]]
     pending = [r for r in rows if r["status"] == POSSIBLE and r["basis"] == "direct_no_text"
                and r["evidence"][0]["verdict"] in STRONG]
+    severe = [r for r in severe if _prefiling_backed(r, as_of)]
+    pending = [r for r in pending if _prefiling_backed(r, as_of)]
     if severe or pending:
         return 3, [_cite(r) for r in severe + pending]
     backed = [r for r in rows if r["status"] == POSSIBLE
@@ -649,7 +669,7 @@ def assess(conn: sqlite3.Connection, pos: dict, as_of, judge=None) -> dict:
                        "derived_from": [r["id"] for r in src if r["status"] == status != NOT],
                        "evidence": top["evidence"][:1] if status != NOT else []}
     ordered = [rows[t.id] for t in trig]
-    stage, why = stage_of(ordered)
+    stage, why = stage_of(ordered, d)
     a = {"position": {k: pos.get(k) for k in ("id", "name", "facility_type", "commitment_usd",
                                                "collateral", "counterparties")},
          "as_of": d, "playbook": terms.get("playbook"), "stage": stage, "stage_label": STAGES[stage],
