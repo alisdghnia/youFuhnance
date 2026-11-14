@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sqlite3
 import sys
@@ -19,9 +20,14 @@ from youfin.sources import TIER_NAMES  # noqa: E402
 
 DEFAULT_DB = ROOT / "data" / "youfin.db"
 START, END = "2025-08-25", "2025-09-25"
+LIVE = {"carvana": ("2026-10-15", "2026-11-14")}   # live counterparties: outcome unknown, no filing/hindsight marks
 FILINGS = {"tricolor": "2025-09-10", "first_brands": "2025-09-25"}   # Chapter 7 / Chapter 11
 DISCLAIMER = "Analysis for the deal team — not investment or legal advice."
 LEVEL_RANK = {"log": 0, "watch": 1, "ALERT": 2}
+
+
+def cp_range(cp):
+    return LIVE.get(cp, (START, END))
 
 
 def open_db(path=None) -> sqlite3.Connection:
@@ -171,12 +177,14 @@ def money(x):
     return f"${x / 1e6:,.0f}M"
 
 
-def render_cp(conn, cp, name, d, market=True):
+def render_cp(conn, cp, name, d, market=True, summary=None):
     """Markdown block for one counterparty on day d."""
     evs = events_at(conn, cp, d)
     top = max((LEVEL_RANK[e["level"]] for e in evs), default=-1)
     status = {2: "ALERT", 1: "WATCH", 0: "no verified alert (log only)", -1: "nothing seen yet"}[top]
     L = [f"## {name}  —  status: {status}", ""]
+    if summary:
+        L += render_summary(summary)
     new = [e for e in evs if e["new"]]
     standing = [e for e in evs if e["level"] != "log" and not e["new"]]
     for title, group in (("New / escalated today", new), ("Standing", standing)):
@@ -220,7 +228,7 @@ def render_brief(conn, d, cps=None, market=True):
     allc = counterparties(conn)
     sel = [c for c in allc if not cps or c["id"] in cps]
     parts = [f"# ACTION BRIEF — {d}", f"_Strictly as-of {d}: only data dated on or before this day._", ""]
-    parts += [render_cp(conn, c["id"], c["name"], d, market) for c in sel]
+    parts += [render_cp(conn, c["id"], c["name"], d, market, summary_for(conn, c["id"], c["name"], d) if market else None) for c in sel]
     parts += ["---", f"_{DISCLAIMER}_", ""]
     return "\n".join(parts)
 
@@ -266,7 +274,7 @@ def market_series(conn, cp):
     if not has_market(conn):
         return None
     try:
-        prows, orows, pn = D.study(conn, cp, START, END)
+        prows, orows, pn = D.study(conn, cp, *cp_range(cp))
     except Exception as e:  # no proxies / no bars
         print(f"market series skipped for {cp}: {e}", flush=True)
         return None
@@ -406,3 +414,106 @@ def team_at(conn, cp, name, d, evs, ms, acts, acts_prev, exp_total, npos):
         prompts.append({"text": f"Quiet day for {name}: no verified change{', market ' + win_txt() if ms and i is not None else ''}. Anything the team should ask Scout to widen?",
                         "evidence": "no new verified events or market triggers"})
     return {"changes": changes[:8], "prompts": prompts[:4]}
+
+
+# ------------------------------------------------------------------ executive summary (rule-based, as-of only)
+def _clip(t, n):
+    t = " ".join(str(t or "").split())
+    return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + "..."
+
+
+def _cov_line(conn, cp, d):
+    try:
+        res = []
+        for p in C.load_positions():
+            if cp in [c["id"] for c in p.get("counterparties", [])]:
+                a = C.assess(conn, p, d)
+                res.append((a["stage"], a["stage_label"], p["id"], a["checklist"]))
+    except Exception as e:  # never break the dashboard on a covenant error
+        return f"unavailable ({type(e).__name__})"
+    if not res:
+        return "no position on this counterparty"
+    st, lab, pid, ck = max(res, key=lambda r: r[0])
+    if not st:
+        return f"stage 0/4 on {pid}: no trigger tripped or possible from public news"
+    top = "; ".join(f"{c['short']} ({c['urgency']})" for c in ck[:2])
+    return f"stage {st}/4 {lab} on {pid}: {top}"
+
+
+def summary_at(conn, cp, name, d, evs, ms, team, exp_total, npos):
+    """Executive summary for day d from the same as-of pieces as the rest of the dashboard. No LLM, no
+    data dated after d (events_at/market rows/covenant are all as-of). T-n is hindsight: only for replays."""
+    live = cp in LIVE
+    top = max(evs, key=lambda e: (LEVEL_RANK[e["level"]], e["severity"]), default=None)
+    lvl = top["level"] if top else "log"
+    new = sorted([e for e in evs if e["new"]], key=lambda e: (-LEVEL_RANK[e["level"]], -e["severity"]))
+    i = _row(ms, d) if ms else None
+    win = ms["win"][i] if i is not None else None
+    tn = ""
+    if not live and FILINGS.get(cp) and lvl == "ALERT":
+        n = (date.fromisoformat(FILINGS[cp]) - date.fromisoformat(d)).days
+        tn = f" (T{'-' if n >= 0 else '+'}{abs(n)})"
+    word = {"ALERT": "ALERT", "watch": "WATCH", "log": "quiet"}[lvl]
+    if lvl == "log":
+        head = f"{name}: no verified alert; " + (f"market window {win.upper()}" if win else "no market read yet")
+    else:
+        pre = "New verified ALERT" if any(e["new"] == "ALERT" for e in evs) else "New WATCH" if new else f"Standing {word}"
+        head = (f"{pre}{tn}: ${exp_total / 1e6:,.0f}M over {npos} position{'s' if npos != 1 else ''}"
+                + (f", market window {win.upper()}" if win else ""))
+    # news
+    pick = new[0] if new else top
+    if pick and lvl != "log":
+        r = best_receipt(pick) or {}
+        q = _clip(r.get("quote"), 90)
+        news = (f"{r.get('domain', 'source')} ({r.get('tier_name', '?')}, {str(r.get('published_at') or '')[:10]}): "
+                f"{_clip(re.sub(r'^\[[^]]*\]\s*', '', pick['headline']), 80)}" + (f" - “{q}”" if q and pick["new"] else "")) + ("" if new else " [standing]")
+    else:
+        news = "no new verified item"
+    # verifier
+    if top and lvl != "log":
+        doms = {x["domain"] for x in top["sources"]}
+        tier = min((x["tier"] for x in top["sources"]), default="?")
+        why = {"corroborated": "independent sources agree", "confirmed": "primary-source confirmation"}.get(top["verdict"], "not independently confirmed yet")
+        ver = f"{word} - {top['verdict'].replace('_', ' ')}: {len(doms)} publisher{'s' if len(doms) != 1 else ''}, best tier T{tier}; {why}"
+    else:
+        ver = "nothing above log level"
+    # market
+    if ms and i is not None:
+        direct = [x["t"] for x in ms["tickers"] if x["direct"]]
+        labs = ", ".join(f"{t} {str(ms['lab'][t][i]).upper()}" for t in direct if ms["lab"][t][i] not in (None, "n/a"))
+        mv = [(t, ms["arz"][t][i]) for t in [x["t"] for x in ms["tickers"]] if ms["arz"][t][i] is not None and ms["arz"][t][i] <= -2]
+        ctxs = [x["t"] for x in ms["tickers"] if x["ctx"] and x["role"] == "sector_etf"]
+        sector_down = any((ms["arz"][t][i] or 0) <= -1.5 for t in ctxs)
+        bits = [f"window {win.upper()}" + (f" ({labs})" if labs else "")]
+        if mv:
+            tag = "moved with the sector (likely noise)" if sector_down else "no sector move (counterparty-specific?)"
+            bits.append("notable: " + ", ".join(f"{t} z={z:+.1f}" for t, z in mv[:3]) + f", {tag}")
+        else:
+            bits.append("no proxy z<=-2")
+        ps, bo = ms["ps"][i], ms["bmax"][i]
+        if ps is not None:
+            bits.append(f"P(stress) {ps:.2f}" + (f", BOCPD {bo:.2f}" if bo else ""))
+        gap = (date.fromisoformat(d) - date.fromisoformat(ms["dates"][i])).days
+        if gap > 1:
+            bits.append(f"weekend/holiday: prices from prior close {ms['dates'][i]}")
+        mk = "; ".join(bits)
+    else:
+        mk = "no market data"
+    pt = team["prompts"][0]["text"] if team and team.get("prompts") else "no open question"
+    sent = [x for x in re.split(r"(?<=[.?!])\s+", pt) if x]
+    prompt = _clip(sent[-1] if sent else pt, 170)
+    return {"headline": head, "news": news, "verifier": ver, "market": mk, "covenant": _cov_line(conn, cp, d), "team": prompt}
+
+
+def render_summary(s):
+    return [f"**Executive summary: {s['headline']}**", f"- News: {s['news']}", f"- Verifier: {s['verifier']}",
+            f"- Market: {s['market']}", f"- Covenant: {s['covenant']}", f"- Team: {s['team']}", ""]
+
+
+def summary_for(conn, cp, name, d):
+    """Standalone summary (brief.py): builds the as-of pieces itself."""
+    evs = [e for e in events_at(conn, cp, d) if e["level"] != "log" or e["new"] or e["severity"] >= 4]
+    ms = market_series(conn, cp) if has_market(conn) else None
+    ps, tot = exposure(conn, cp)
+    team = team_at(conn, cp, name, d, evs, ms, actions_at(conn, cp, d), actions_at(conn, cp, _prev(d)), tot, len(ps))
+    return summary_at(conn, cp, name, d, evs, ms, team, tot, len(ps))

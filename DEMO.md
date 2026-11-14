@@ -22,6 +22,12 @@ python3 scripts/brief.py --as-of 2025-09-07 --counterparty tricolor --db path/to
 - Play (speed 0.5x-4x), Space = play/pause, left/right arrows = step a day. Deep link: `dashboard.html#cp=tricolor&d=2025-09-07`.
 - Theme button toggles dark/light.
 
+## Live case: Carvana (2026-11-14, outcome unknown)
+A live counterparty (CVNA, large auto-loan ABS issuer) with a hypothetical $25M Class A position (abf-004). Run: `python3 scripts/scout.py live --counterparty carvana --lookback 30 --fetch 4`, then `verify.py live --counterparty carvana`, `market.py assess --counterparty carvana --as-of 2026-11-14`, `covenant.py assess --position abf-004 --as-of 2026-11-14`, `brief.py --as-of 2026-11-14 --counterparty carvana`.
+- You.com fetched about 60 articles for Oct 15 - Nov 14 (Q3 earnings Oct 29, the $1.6B prime auto ABS deal Nov 2, the investor class action on title/registration compliance Nov 5-6, a CVNA -7% day on Nov 10).
+- To show it: dashboard, pick Carvana (red "LIVE - outcome unknown" chip, slider ends today, no filing/hindsight cards). Read the Executive summary at the top, then the receipts.
+- Honest read: the market desk shows window OPEN and no stress (P(stress) ~0.08), so the verifier ALERTs on fraud/insolvency come from lawsuit coverage and background pages (Wikipedia/Grokipedia history), not a credit event. This is a demo of the pipeline on live news, not a Carvana credit call; expect false-positive pressure on a healthy name.
+
 ## Honest caveats
 - **Replay integrity:** pretrained models' cutoffs predate the events and no model is ever trained on our data; `python3 scripts/leak_check.py` deletes everything dated after D from a DB copy and proves market, covenant, brief and dashboard outputs for D are identical (PASS on Tricolor Sep 5/7, First Brands Sep 2/19).
 - The portfolio is **hypothetical**; counterparties are real public companies, positions/sizes/terms are invented.

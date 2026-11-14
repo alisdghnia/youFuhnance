@@ -9,8 +9,20 @@
       "name": "Tricolor Holdings",
       "role": "originator/servicer",
       "sector": "subprime auto",
-      "aliases": ["tricolor"],
-      "context": ["auto", "lender", "subprime", "dealership", "securitization", "loan", "bank", "holdings", "chu"],
+      "aliases": [
+        "tricolor"
+      ],
+      "context": [
+        "auto",
+        "lender",
+        "subprime",
+        "dealership",
+        "securitization",
+        "loan",
+        "bank",
+        "holdings",
+        "chu"
+      ],
       "queries": [
         "Tricolor Auto",
         "Tricolor Holdings subprime auto lender",
@@ -18,14 +30,49 @@
         "Tricolor auto lender layoffs lawsuit investigation"
       ],
       "proxies": [
-        {"ticker": "OBK", "role": "exposed_lender", "vs": "KRE", "note": "Origin Bancorp: 8-K disclosed ~$30.1M loan commitments"},
-        {"ticker": "FITB", "role": "exposed_lender", "vs": "KRE", "note": "Fifth Third: Tricolor-linked fraud loss disclosed"},
-        {"ticker": "JPM", "role": "exposed_lender", "vs": "KRE", "relevance": 0.5, "note": "JPMorgan: reported warehouse lender; any plausible exposure is tiny vs its equity (diluted)"},
-        {"ticker": "CACC", "role": "peer", "note": "Credit Acceptance: subprime auto lender"},
-        {"ticker": "CPSS", "role": "peer", "note": "Consumer Portfolio Services: subprime auto lender"},
-        {"ticker": "KRE", "role": "sector_etf", "note": "SPDR S&P Regional Banking ETF"},
-        {"ticker": "HYG", "role": "credit", "note": "iShares iBoxx high-yield corporate bond ETF"},
-        {"ticker": "SPY", "role": "market"}
+        {
+          "ticker": "OBK",
+          "role": "exposed_lender",
+          "vs": "KRE",
+          "note": "Origin Bancorp: 8-K disclosed ~$30.1M loan commitments"
+        },
+        {
+          "ticker": "FITB",
+          "role": "exposed_lender",
+          "vs": "KRE",
+          "note": "Fifth Third: Tricolor-linked fraud loss disclosed"
+        },
+        {
+          "ticker": "JPM",
+          "role": "exposed_lender",
+          "vs": "KRE",
+          "relevance": 0.5,
+          "note": "JPMorgan: reported warehouse lender; any plausible exposure is tiny vs its equity (diluted)"
+        },
+        {
+          "ticker": "CACC",
+          "role": "peer",
+          "note": "Credit Acceptance: subprime auto lender"
+        },
+        {
+          "ticker": "CPSS",
+          "role": "peer",
+          "note": "Consumer Portfolio Services: subprime auto lender"
+        },
+        {
+          "ticker": "KRE",
+          "role": "sector_etf",
+          "note": "SPDR S&P Regional Banking ETF"
+        },
+        {
+          "ticker": "HYG",
+          "role": "credit",
+          "note": "iShares iBoxx high-yield corporate bond ETF"
+        },
+        {
+          "ticker": "SPY",
+          "role": "market"
+        }
       ]
     },
     {
@@ -33,24 +80,147 @@
       "name": "First Brands Group",
       "role": "obligor (trade receivables)",
       "sector": "auto parts",
-      "aliases": ["first brands"],
-      "context": ["auto", "parts", "debt", "loan", "lender", "creditor", "financing", "patrick james", "brakes", "fram"],
+      "aliases": [
+        "first brands"
+      ],
+      "context": [
+        "auto",
+        "parts",
+        "debt",
+        "loan",
+        "lender",
+        "creditor",
+        "financing",
+        "patrick james",
+        "brakes",
+        "fram"
+      ],
       "queries": [
         "First Brands Group",
         "First Brands Group debt refinancing",
         "First Brands invoice financing factoring"
       ],
       "proxies": [
-        {"ticker": "JEF", "role": "exposed_lender", "vs": "XLF", "note": "Jefferies: Point Bonita fund bought First Brands receivables"},
-        {"ticker": "UBS", "role": "exposed_lender", "vs": "XLF", "relevance": 0.6, "note": "UBS: funds exposed to First Brands invoice finance (ADR); large balance sheet dilutes it"},
-        {"ticker": "AAP", "role": "customer", "note": "Advance Auto Parts"},
-        {"ticker": "AZO", "role": "customer", "note": "AutoZone"},
-        {"ticker": "ORLY", "role": "customer", "note": "O'Reilly Automotive"},
-        {"ticker": "DORM", "role": "peer", "note": "Dorman Products: auto-parts supplier"},
-        {"ticker": "XLF", "role": "sector_etf", "note": "Financial Select Sector SPDR"},
-        {"ticker": "HYG", "role": "credit", "note": "iShares iBoxx high-yield corporate bond ETF"},
-        {"ticker": "JNK", "role": "credit", "note": "SPDR Bloomberg high-yield bond ETF"},
-        {"ticker": "SPY", "role": "market"}
+        {
+          "ticker": "JEF",
+          "role": "exposed_lender",
+          "vs": "XLF",
+          "note": "Jefferies: Point Bonita fund bought First Brands receivables"
+        },
+        {
+          "ticker": "UBS",
+          "role": "exposed_lender",
+          "vs": "XLF",
+          "relevance": 0.6,
+          "note": "UBS: funds exposed to First Brands invoice finance (ADR); large balance sheet dilutes it"
+        },
+        {
+          "ticker": "AAP",
+          "role": "customer",
+          "note": "Advance Auto Parts"
+        },
+        {
+          "ticker": "AZO",
+          "role": "customer",
+          "note": "AutoZone"
+        },
+        {
+          "ticker": "ORLY",
+          "role": "customer",
+          "note": "O'Reilly Automotive"
+        },
+        {
+          "ticker": "DORM",
+          "role": "peer",
+          "note": "Dorman Products: auto-parts supplier"
+        },
+        {
+          "ticker": "XLF",
+          "role": "sector_etf",
+          "note": "Financial Select Sector SPDR"
+        },
+        {
+          "ticker": "HYG",
+          "role": "credit",
+          "note": "iShares iBoxx high-yield corporate bond ETF"
+        },
+        {
+          "ticker": "JNK",
+          "role": "credit",
+          "note": "SPDR Bloomberg high-yield bond ETF"
+        },
+        {
+          "ticker": "SPY",
+          "role": "market"
+        }
+      ]
+    },
+    {
+      "id": "carvana",
+      "name": "Carvana Co.",
+      "role": "originator/servicer (auto ABS issuer)",
+      "sector": "used-auto retail / prime auto ABS",
+      "aliases": [
+        "carvana"
+      ],
+      "context": [
+        "auto",
+        "used car",
+        "used-car",
+        "abs",
+        "securitization",
+        "loan",
+        "lender",
+        "receivables",
+        "earnings",
+        "cvna",
+        "vehicles",
+        "dealer",
+        "ally"
+      ],
+      "queries": [
+        "Carvana auto ABS securitization",
+        "Carvana CVNA earnings credit",
+        "Carvana Auto Receivables Trust",
+        "Carvana auto loan delinquencies lawsuit investigation"
+      ],
+      "proxies": [
+        {
+          "ticker": "CVNA",
+          "role": "exposed_issuer",
+          "vs": "XLY",
+          "note": "Carvana Global: the issuer/obligor itself"
+        },
+        {
+          "ticker": "ALLY",
+          "role": "exposed_lender",
+          "vs": "XLY",
+          "note": "Ally Financial: buys Carvana auto loans"
+        },
+        {
+          "ticker": "KMX",
+          "role": "peer",
+          "note": "CarMax: used-auto retailer and lender"
+        },
+        {
+          "ticker": "CACC",
+          "role": "peer",
+          "note": "Credit Acceptance: auto lender"
+        },
+        {
+          "ticker": "XLY",
+          "role": "sector_etf",
+          "note": "Consumer Discretionary Select Sector SPDR"
+        },
+        {
+          "ticker": "HYG",
+          "role": "credit",
+          "note": "iShares iBoxx high-yield corporate bond ETF"
+        },
+        {
+          "ticker": "SPY",
+          "role": "market"
+        }
       ]
     }
   ],
@@ -64,7 +234,12 @@
       "commitment_usd": 75000000,
       "hypothetical": true,
       "notes": "85% advance rate; borrowing base reported monthly; Tricolor is also servicer.",
-      "counterparties": [{"id": "tricolor", "relationship": "borrower + servicer"}],
+      "counterparties": [
+        {
+          "id": "tricolor",
+          "relationship": "borrower + servicer"
+        }
+      ],
       "terms": {
         "_hypothetical": "MOCK terms invented for this demo; not the documents of any real facility.",
         "playbook": "warehouse",
@@ -88,45 +263,298 @@
             "obligor resident in TX or CA; APR within the state cap",
             "complete contract file listed on the custodial receipt"
           ],
-          "concentration_limits": ["single dealer <= 15%", "original term > 72 months <= 10%"],
-          "draw_conditions": ["no Default or Event of Default", "representations true, incl. sole-lien and title reps", "borrowing base certificate dated within 30 days", "no Material Adverse Change"]
+          "concentration_limits": [
+            "single dealer <= 15%",
+            "original term > 72 months <= 10%"
+          ],
+          "draw_conditions": [
+            "no Default or Event of Default",
+            "representations true, incl. sole-lien and title reps",
+            "borrowing base certificate dated within 30 days",
+            "no Material Adverse Change"
+          ]
         },
         "reporting_covenants": [
-          {"id": "RPT-BBC", "label": "Borrowing base certificate + data tape", "description": "Monthly borrowing base certificate, servicer report and loan-level data tape by the 15th; an interim certificate within 2 business days of the Lender's request.", "evidence": {"direct": [], "indirect": ["operations"]}, "observable": false, "cure": "3 business days", "consequence": "Event of Default; advances blocked while late"},
-          {"id": "RPT-NOTICE", "label": "Notice of default / other-creditor remedies", "description": "Notice within 2 business days of any Default, any other creditor's default notice or exercise of remedies, and any governmental investigation.", "evidence": {"direct": [], "indirect": ["lender_action", "regulatory", "fraud"]}, "observable": false, "cure": "none", "consequence": "Event of Default"}
+          {
+            "id": "RPT-BBC",
+            "label": "Borrowing base certificate + data tape",
+            "description": "Monthly borrowing base certificate, servicer report and loan-level data tape by the 15th; an interim certificate within 2 business days of the Lender's request.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations"
+              ]
+            },
+            "observable": false,
+            "cure": "3 business days",
+            "consequence": "Event of Default; advances blocked while late"
+          },
+          {
+            "id": "RPT-NOTICE",
+            "label": "Notice of default / other-creditor remedies",
+            "description": "Notice within 2 business days of any Default, any other creditor's default notice or exercise of remedies, and any governmental investigation.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "lender_action",
+                "regulatory",
+                "fraud"
+              ]
+            },
+            "observable": false,
+            "cure": "none",
+            "consequence": "Event of Default"
+          }
         ],
         "review_events": [
-          {"id": "REV-CREDITOR", "label": "Other-creditor disclosure (review event)", "description": "Any other lender, securitization party or regulator publicly discloses material exposure to, an impairment of, or remedies against the Borrower or Servicer.", "evidence": {"direct": ["lender_disclosure", "lender_action"], "indirect": ["credit"]}, "cure": "n/a (not a default)", "consequence": "Borrower delivers an interim borrowing base certificate, data tape and written explanation within 2 business days; further advances conditional on a satisfactory review; field exam at the Borrower's cost"}
+          {
+            "id": "REV-CREDITOR",
+            "label": "Other-creditor disclosure (review event)",
+            "description": "Any other lender, securitization party or regulator publicly discloses material exposure to, an impairment of, or remedies against the Borrower or Servicer.",
+            "evidence": {
+              "direct": [
+                "lender_disclosure",
+                "lender_action"
+              ],
+              "indirect": [
+                "credit"
+              ]
+            },
+            "cure": "n/a (not a default)",
+            "consequence": "Borrower delivers an interim borrowing base certificate, data tape and written explanation within 2 business days; further advances conditional on a satisfactory review; field exam at the Borrower's cost"
+          }
         ],
         "events_of_default": [
-          {"id": "EOD-PAY", "label": "Payment / borrowing-base deficiency", "description": "Failure to pay interest or fees within 2 business days, or to repay a borrowing-base deficiency within 2 business days.", "evidence": {"direct": [], "indirect": ["operations", "insolvency"]}, "observable": false, "cure": "2 business days", "consequence": "acceleration at the Lender's option; default interest"},
-          {"id": "EOD-REP", "label": "Collateral rep breach / double pledge", "description": "Any pledged contract is subject to another lien (double-pledged), was not originated as represented, or its title is not held by the Custodian with the Lender as lienholder; or fraud / material misrepresentation in any borrowing base certificate.", "evidence": {"direct": ["fraud"], "indirect": ["lender_action", "diligence_red_flag"]}, "severe": true, "cure": "none for fraud; 10 business days to repurchase an inadvertently ineligible contract", "consequence": "acceleration; affected contracts leave the borrowing base immediately"},
-          {"id": "EOD-INS", "label": "Insolvency event", "description": "Borrower, Servicer or Parent files (or has filed against it, undismissed for 60 days) a bankruptcy petition, admits in writing it cannot pay its debts, or takes corporate action to authorize either.", "evidence": {"direct": ["insolvency"], "requires_text": "filing", "indirect": ["funding"]}, "severe": true, "cure": "none (involuntary petition: 60 days to dismiss)", "consequence": "automatic acceleration and termination of the commitment; from the petition date the automatic stay (11 U.S.C. 362) limits enforcement"},
-          {"id": "EOD-OPS", "label": "Cessation of business", "description": "Borrower or Servicer suspends originations or servicing, or furloughs substantially all staff, for 3 or more business days.", "evidence": {"direct": ["operations"], "indirect": ["lender_action"]}, "severe": true, "cure": "3 business days", "consequence": "acceleration at the Lender's option; also a Servicer Termination Event"},
-          {"id": "EOD-LIT", "label": "Judgments / governmental proceedings", "description": "Unstayed judgments over $5M for 30 days, or an indictment or governmental enforcement action against the Borrower, Servicer or senior management.", "evidence": {"direct": ["regulatory"], "indirect": ["litigation", "fraud"]}, "cure": "30 days for judgments; none for an indictment", "consequence": "acceleration at the Lender's option"}
+          {
+            "id": "EOD-PAY",
+            "label": "Payment / borrowing-base deficiency",
+            "description": "Failure to pay interest or fees within 2 business days, or to repay a borrowing-base deficiency within 2 business days.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations",
+                "insolvency"
+              ]
+            },
+            "observable": false,
+            "cure": "2 business days",
+            "consequence": "acceleration at the Lender's option; default interest"
+          },
+          {
+            "id": "EOD-REP",
+            "label": "Collateral rep breach / double pledge",
+            "description": "Any pledged contract is subject to another lien (double-pledged), was not originated as represented, or its title is not held by the Custodian with the Lender as lienholder; or fraud / material misrepresentation in any borrowing base certificate.",
+            "evidence": {
+              "direct": [
+                "fraud"
+              ],
+              "indirect": [
+                "lender_action",
+                "diligence_red_flag"
+              ]
+            },
+            "severe": true,
+            "cure": "none for fraud; 10 business days to repurchase an inadvertently ineligible contract",
+            "consequence": "acceleration; affected contracts leave the borrowing base immediately"
+          },
+          {
+            "id": "EOD-INS",
+            "label": "Insolvency event",
+            "description": "Borrower, Servicer or Parent files (or has filed against it, undismissed for 60 days) a bankruptcy petition, admits in writing it cannot pay its debts, or takes corporate action to authorize either.",
+            "evidence": {
+              "direct": [
+                "insolvency"
+              ],
+              "requires_text": "filing",
+              "indirect": [
+                "funding"
+              ]
+            },
+            "severe": true,
+            "cure": "none (involuntary petition: 60 days to dismiss)",
+            "consequence": "automatic acceleration and termination of the commitment; from the petition date the automatic stay (11 U.S.C. 362) limits enforcement"
+          },
+          {
+            "id": "EOD-OPS",
+            "label": "Cessation of business",
+            "description": "Borrower or Servicer suspends originations or servicing, or furloughs substantially all staff, for 3 or more business days.",
+            "evidence": {
+              "direct": [
+                "operations"
+              ],
+              "indirect": [
+                "lender_action"
+              ]
+            },
+            "severe": true,
+            "cure": "3 business days",
+            "consequence": "acceleration at the Lender's option; also a Servicer Termination Event"
+          },
+          {
+            "id": "EOD-LIT",
+            "label": "Judgments / governmental proceedings",
+            "description": "Unstayed judgments over $5M for 30 days, or an indictment or governmental enforcement action against the Borrower, Servicer or senior management.",
+            "evidence": {
+              "direct": [
+                "regulatory"
+              ],
+              "indirect": [
+                "litigation",
+                "fraud"
+              ]
+            },
+            "cure": "30 days for judgments; none for an indictment",
+            "consequence": "acceleration at the Lender's option"
+          }
         ],
-        "cross_default": {"id": "XDEF", "label": "Cross-default / other lenders' remedies", "threshold_usd": 5000000, "description": "Default or acceleration under, or any creditor's exercise of remedies (seizure, foreclosure, cash sweep) against, other Indebtedness of the Borrower or Parent above $5M, incl. other warehouse lines and securitizations.", "evidence": {"direct": ["lender_action"], "indirect": ["lender_disclosure", "credit", "funding"]}, "severe": true, "cure": "none for acceleration or remedies; 10 business days for a payment default on other debt", "consequence": "acceleration at the Lender's option"},
-        "mac_clause": {"id": "MAC", "label": "Material adverse change", "description": "A material adverse change in the business, the collateral, or the ability of the Borrower or Servicer to perform, in the Lender's reasonable judgment; also a condition to each advance.", "evidence": {"direct": ["insolvency", "fraud", "operations", "lender_action"], "indirect": ["credit", "diligence_red_flag", "lender_disclosure", "funding", "regulatory"]}, "max_status": "possible", "cure": "n/a", "consequence": "draw condition fails; an EoD only if the MAC is proven, which courts rarely accept on its own: rely on specific defaults and reserve rights"},
+        "cross_default": {
+          "id": "XDEF",
+          "label": "Cross-default / other lenders' remedies",
+          "threshold_usd": 5000000,
+          "description": "Default or acceleration under, or any creditor's exercise of remedies (seizure, foreclosure, cash sweep) against, other Indebtedness of the Borrower or Parent above $5M, incl. other warehouse lines and securitizations.",
+          "evidence": {
+            "direct": [
+              "lender_action"
+            ],
+            "indirect": [
+              "lender_disclosure",
+              "credit",
+              "funding"
+            ]
+          },
+          "severe": true,
+          "cure": "none for acceleration or remedies; 10 business days for a payment default on other debt",
+          "consequence": "acceleration at the Lender's option"
+        },
+        "mac_clause": {
+          "id": "MAC",
+          "label": "Material adverse change",
+          "description": "A material adverse change in the business, the collateral, or the ability of the Borrower or Servicer to perform, in the Lender's reasonable judgment; also a condition to each advance.",
+          "evidence": {
+            "direct": [
+              "insolvency",
+              "fraud",
+              "operations",
+              "lender_action"
+            ],
+            "indirect": [
+              "credit",
+              "diligence_red_flag",
+              "lender_disclosure",
+              "funding",
+              "regulatory"
+            ]
+          },
+          "max_status": "possible",
+          "cure": "n/a",
+          "consequence": "draw condition fails; an EoD only if the MAC is proven, which courts rarely accept on its own: rely on specific defaults and reserve rights"
+        },
         "servicer": {
           "servicer": "Tricolor (affiliate of the borrower)",
           "backup_servicer": "warm backup servicer (unnamed): monthly data-file mapping; hot transition within 30 days of notice; costs paid from collections ahead of interest",
           "termination_events": [
-            {"id": "STE-INS", "label": "Servicer insolvency", "description": "Servicer insolvency event (as EOD-INS).", "evidence": {"direct": ["insolvency"], "requires_text": "filing", "indirect": ["funding"]}, "severe": true, "cure": "none", "consequence": "Lender may terminate the servicer and appoint the backup servicer; after a petition, ipso facto termination generally needs stay relief"},
-            {"id": "STE-REMIT", "label": "Failure to remit collections", "description": "Servicer fails to deposit collections into the collection account within 2 business days of receipt.", "evidence": {"direct": [], "indirect": ["operations", "lender_action"]}, "observable": false, "cure": "2 business days", "consequence": "Servicer Termination Event"},
-            {"id": "STE-OPS", "label": "Servicer stops servicing", "description": "Servicer suspends or abandons servicing, or loses the staff or systems to service.", "evidence": {"direct": ["operations"], "indirect": []}, "severe": true, "cure": "none", "consequence": "Servicer Termination Event"},
-            {"id": "STE-FRAUD", "label": "Servicer fraud / misapplied collections", "description": "Fraud, misapplication of collections or material misstatement in any servicer report.", "evidence": {"direct": ["fraud"], "indirect": ["diligence_red_flag"]}, "severe": true, "cure": "none", "consequence": "Servicer Termination Event"},
-            {"id": "STE-PERF", "label": "Portfolio performance triggers", "description": "60+ day delinquencies above 12% or annualized net losses above 15% (3-month average).", "evidence": {"direct": [], "indirect": ["credit"]}, "observable": false, "cure": "none", "consequence": "Servicer Termination Event; advance rate steps down to 75%"}
+            {
+              "id": "STE-INS",
+              "label": "Servicer insolvency",
+              "description": "Servicer insolvency event (as EOD-INS).",
+              "evidence": {
+                "direct": [
+                  "insolvency"
+                ],
+                "requires_text": "filing",
+                "indirect": [
+                  "funding"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Lender may terminate the servicer and appoint the backup servicer; after a petition, ipso facto termination generally needs stay relief"
+            },
+            {
+              "id": "STE-REMIT",
+              "label": "Failure to remit collections",
+              "description": "Servicer fails to deposit collections into the collection account within 2 business days of receipt.",
+              "evidence": {
+                "direct": [],
+                "indirect": [
+                  "operations",
+                  "lender_action"
+                ]
+              },
+              "observable": false,
+              "cure": "2 business days",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-OPS",
+              "label": "Servicer stops servicing",
+              "description": "Servicer suspends or abandons servicing, or loses the staff or systems to service.",
+              "evidence": {
+                "direct": [
+                  "operations"
+                ],
+                "indirect": []
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-FRAUD",
+              "label": "Servicer fraud / misapplied collections",
+              "description": "Fraud, misapplication of collections or material misstatement in any servicer report.",
+              "evidence": {
+                "direct": [
+                  "fraud"
+                ],
+                "indirect": [
+                  "diligence_red_flag"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-PERF",
+              "label": "Portfolio performance triggers",
+              "description": "60+ day delinquencies above 12% or annualized net losses above 15% (3-month average).",
+              "evidence": {
+                "direct": [],
+                "indirect": [
+                  "credit"
+                ]
+              },
+              "observable": false,
+              "cure": "none",
+              "consequence": "Servicer Termination Event; advance rate steps down to 75%"
+            }
           ]
         },
         "cash_management": {
           "lockbox": "Obligor payments go to a lockbox and collection account at the Collection Bank in the Borrower's name, under a springing deposit account control agreement (DACA) in the Lender's favor; until activation, funds sweep daily to the Borrower.",
-          "springing_dominion": {"id": "CASH-DOM", "label": "Springing cash dominion trigger", "description": "Springs on any Event of Default, Servicer Termination Event or cross-default (or availability below 10% of the borrowing base for 3 business days).", "derived_from": ["EOD-*", "STE-*", "XDEF"], "cure": "n/a", "consequence": "Lender may deliver a notice of exclusive control to the Collection Bank; collections then sweep daily to a Lender-controlled account and pay down advances"},
+          "springing_dominion": {
+            "id": "CASH-DOM",
+            "label": "Springing cash dominion trigger",
+            "description": "Springs on any Event of Default, Servicer Termination Event or cross-default (or availability below 10% of the borrowing base for 3 business days).",
+            "derived_from": [
+              "EOD-*",
+              "STE-*",
+              "XDEF"
+            ],
+            "cure": "n/a",
+            "consequence": "Lender may deliver a notice of exclusive control to the Collection Bank; collections then sweep daily to a Lender-controlled account and pay down advances"
+          },
           "preference_consideration": "For counsel: sweeps and paydowns in the 90 days before a petition (1 year for insiders) can face preference claims (11 U.S.C. 547). Collections on collateral of a fully secured lender are generally not preferential, but double-pledged collateral makes 'fully secured' uncertain."
         },
         "collateral_custody": {
           "titles": "Custodian holds original certificates of title / electronic lien records with the Lender (or the Custodian as its agent) noted as lienholder, plus the retail installment contract files; custodial receipt at each funding; monthly exception report.",
           "ucc": "UCC-1 against the Borrower SPV (Delaware) covering all receivables and proceeds; UCC-1 against Tricolor (Texas) covering the sale of receivables to the SPV.",
-          "double_pledge_checks": ["reconcile VINs in the data tape against custodial receipts and title records", "UCC / lien search for competing financing statements", "compare VIN lists with other warehouse lenders through counsel"]
+          "double_pledge_checks": [
+            "reconcile VINs in the data tape against custodial receipts and title records",
+            "UCC / lien search for competing financing statements",
+            "compare VIN lists with other warehouse lenders through counsel"
+          ]
         }
       }
     },
@@ -139,7 +567,12 @@
       "commitment_usd": 20000000,
       "hypothetical": true,
       "notes": "Held position in a real public deal name; size invented.",
-      "counterparties": [{"id": "tricolor", "relationship": "sponsor + servicer"}],
+      "counterparties": [
+        {
+          "id": "tricolor",
+          "relationship": "sponsor + servicer"
+        }
+      ],
       "terms": {
         "_hypothetical": "MOCK terms invented for this demo; the deal name is real, the position size and every term below are not taken from its documents.",
         "playbook": "abs_notes",
@@ -162,23 +595,123 @@
           "information": "monthly servicer report, trustee notices, investor reporting site"
         },
         "events_of_default": [
-          {"id": "EOD-IND", "label": "Indenture event of default", "description": "Failure to pay interest on the Controlling Class within 5 business days, principal at final maturity, or an insolvency of the Issuer (trust). A sponsor/servicer bankruptcy is NOT itself an indenture default: the trust is bankruptcy-remote.", "evidence": {"direct": [], "indirect": ["operations", "insolvency"]}, "observable": false, "cure": "5 business days (interest)", "consequence": "acceleration at the direction of a majority of the Controlling Class; Class B interest is subordinated"}
+          {
+            "id": "EOD-IND",
+            "label": "Indenture event of default",
+            "description": "Failure to pay interest on the Controlling Class within 5 business days, principal at final maturity, or an insolvency of the Issuer (trust). A sponsor/servicer bankruptcy is NOT itself an indenture default: the trust is bankruptcy-remote.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations",
+                "insolvency"
+              ]
+            },
+            "observable": false,
+            "cure": "5 business days (interest)",
+            "consequence": "acceleration at the direction of a majority of the Controlling Class; Class B interest is subordinated"
+          }
         ],
         "servicer": {
           "servicer": "Tricolor",
           "backup_servicer": "named in the deal; transition on the Indenture Trustee's notice",
           "termination_events": [
-            {"id": "STE-INS", "label": "Servicer insolvency", "description": "Insolvency event of the servicer.", "evidence": {"direct": ["insolvency"], "requires_text": "filing", "indirect": ["funding"]}, "severe": true, "cure": "none", "consequence": "trustee may (at Controlling Class direction shall) terminate the servicer; after a petition, ipso facto termination generally needs bankruptcy-court relief"},
-            {"id": "STE-REMIT", "label": "Failure to deposit collections", "description": "Servicer fails to deposit collections into the trust collection account within 2 business days.", "evidence": {"direct": [], "indirect": ["operations", "lender_action"]}, "observable": false, "cure": "2 business days (5 after notice)", "consequence": "Servicer Termination Event"},
-            {"id": "STE-OPS", "label": "Servicer stops servicing", "description": "Servicer suspends servicing or loses the staff or systems to service.", "evidence": {"direct": ["operations"], "indirect": []}, "severe": true, "cure": "none", "consequence": "Servicer Termination Event"},
-            {"id": "STE-FRAUD", "label": "Servicer fraud / misreporting", "description": "Fraud or material misstatement in servicer reports, or misapplied collections.", "evidence": {"direct": ["fraud"], "indirect": ["diligence_red_flag"]}, "severe": true, "cure": "none", "consequence": "Servicer Termination Event"}
+            {
+              "id": "STE-INS",
+              "label": "Servicer insolvency",
+              "description": "Insolvency event of the servicer.",
+              "evidence": {
+                "direct": [
+                  "insolvency"
+                ],
+                "requires_text": "filing",
+                "indirect": [
+                  "funding"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "trustee may (at Controlling Class direction shall) terminate the servicer; after a petition, ipso facto termination generally needs bankruptcy-court relief"
+            },
+            {
+              "id": "STE-REMIT",
+              "label": "Failure to deposit collections",
+              "description": "Servicer fails to deposit collections into the trust collection account within 2 business days.",
+              "evidence": {
+                "direct": [],
+                "indirect": [
+                  "operations",
+                  "lender_action"
+                ]
+              },
+              "observable": false,
+              "cure": "2 business days (5 after notice)",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-OPS",
+              "label": "Servicer stops servicing",
+              "description": "Servicer suspends servicing or loses the staff or systems to service.",
+              "evidence": {
+                "direct": [
+                  "operations"
+                ],
+                "indirect": []
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-FRAUD",
+              "label": "Servicer fraud / misreporting",
+              "description": "Fraud or material misstatement in servicer reports, or misapplied collections.",
+              "evidence": {
+                "direct": [
+                  "fraud"
+                ],
+                "indirect": [
+                  "diligence_red_flag"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            }
           ]
         },
         "performance_triggers": [
-          {"id": "PERF-CNL", "label": "Cumulative net loss trigger", "description": "Cumulative net losses above the schedule (e.g. 12% by month 12); the waterfall turns fully sequential, deferring Class B principal.", "evidence": {"direct": [], "indirect": ["credit", "operations"]}, "observable": false, "cure": "none", "consequence": "sequential pay; Class B principal deferred until Class A is repaid"}
+          {
+            "id": "PERF-CNL",
+            "label": "Cumulative net loss trigger",
+            "description": "Cumulative net losses above the schedule (e.g. 12% by month 12); the waterfall turns fully sequential, deferring Class B principal.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "credit",
+                "operations"
+              ]
+            },
+            "observable": false,
+            "cure": "none",
+            "consequence": "sequential pay; Class B principal deferred until Class A is repaid"
+          }
         ],
         "sponsor_reps": [
-          {"id": "REP-REPURCHASE", "label": "Sponsor rep breach (repurchase)", "description": "Receivables that were ineligible when sold to the trust (fictitious, double-pledged, not perfected) must be repurchased by the sponsor.", "evidence": {"direct": ["fraud"], "indirect": ["lender_action"]}, "cure": "repurchase within 30 days of discovery", "consequence": "repurchase claim against the sponsor, only as good as the sponsor's credit"}
+          {
+            "id": "REP-REPURCHASE",
+            "label": "Sponsor rep breach (repurchase)",
+            "description": "Receivables that were ineligible when sold to the trust (fictitious, double-pledged, not perfected) must be repurchased by the sponsor.",
+            "evidence": {
+              "direct": [
+                "fraud"
+              ],
+              "indirect": [
+                "lender_action"
+              ]
+            },
+            "cure": "repurchase within 30 days of discovery",
+            "consequence": "repurchase claim against the sponsor, only as good as the sponsor's credit"
+          }
         ],
         "cash_management": {
           "collection_account": "segregated trust account in the Indenture Trustee's name",
@@ -200,7 +733,12 @@
       "commitment_usd": 40000000,
       "hypothetical": true,
       "notes": "Receivables originated by First Brands Group.",
-      "counterparties": [{"id": "first_brands", "relationship": "seller + servicer"}],
+      "counterparties": [
+        {
+          "id": "first_brands",
+          "relationship": "seller + servicer"
+        }
+      ],
       "terms": {
         "_hypothetical": "MOCK terms invented for this demo; not the documents of any real facility.",
         "playbook": "receivables_purchase",
@@ -211,40 +749,357 @@
           "collection_bank": "collection account bank (unnamed)"
         },
         "purchase_terms": {
-          "advance_rate": 0.90,
+          "advance_rate": 0.9,
           "purchase_price": "face value less a discount for expected days outstanding; 90% paid at purchase",
           "deferred_purchase_price": "10% of face, paid after the invoice is collected (first-loss reserve for dilution)",
           "recourse": "no recourse for an account debtor's credit; full recourse for dilution, disputes and breached reps",
-          "eligibility": ["invoice for goods already delivered, no more than 90 days from invoice date", "not disputed, not subject to setoff or credit notes", "not sold, factored or pledged to anyone else", "account debtor not notified of any other assignment", "passed invoice verification when sampled"],
-          "concentration_limits": ["single account debtor <= 35%"],
-          "purchase_conditions": ["no Review Event or Termination Event", "representations true", "weekly report delivered"],
+          "eligibility": [
+            "invoice for goods already delivered, no more than 90 days from invoice date",
+            "not disputed, not subject to setoff or credit notes",
+            "not sold, factored or pledged to anyone else",
+            "account debtor not notified of any other assignment",
+            "passed invoice verification when sampled"
+          ],
+          "concentration_limits": [
+            "single account debtor <= 35%"
+          ],
+          "purchase_conditions": [
+            "no Review Event or Termination Event",
+            "representations true",
+            "weekly report delivered"
+          ],
           "true_sale": "intended true sale; UCC-1 filed against the Seller (a sale of accounts is perfected by filing)",
           "notification": "undisclosed: account debtors are not told of the sale until a Termination Event"
         },
         "reporting_covenants": [
-          {"id": "RPT-WEEKLY", "label": "Weekly servicer report / notices", "description": "Weekly servicer report, aging and collections reconciliation; notice within 2 business days of any Termination Event or of any other financier's claim to purchased invoices.", "evidence": {"direct": [], "indirect": ["operations", "funding"]}, "observable": false, "cure": "2 business days", "consequence": "Termination Event"}
+          {
+            "id": "RPT-WEEKLY",
+            "label": "Weekly servicer report / notices",
+            "description": "Weekly servicer report, aging and collections reconciliation; notice within 2 business days of any Termination Event or of any other financier's claim to purchased invoices.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations",
+                "funding"
+              ]
+            },
+            "observable": false,
+            "cure": "2 business days",
+            "consequence": "Termination Event"
+          }
         ],
         "review_events": [
-          {"id": "REV-FIN", "label": "Review event (financing practices)", "description": "Any third-party review, audit or public report questioning the Seller's receivables or supply-chain financing or off-balance-sheet obligations; auditor resignation; restatement.", "evidence": {"direct": ["diligence_red_flag"], "indirect": ["lender_disclosure", "credit"]}, "cure": "n/a (not a default)", "consequence": "Purchaser may stop buying; Seller delivers within 3 business days a schedule of ALL receivables financings and invoice-level data; Purchaser may verify every outstanding invoice with account debtors at the Seller's cost"}
+          {
+            "id": "REV-FIN",
+            "label": "Review event (financing practices)",
+            "description": "Any third-party review, audit or public report questioning the Seller's receivables or supply-chain financing or off-balance-sheet obligations; auditor resignation; restatement.",
+            "evidence": {
+              "direct": [
+                "diligence_red_flag"
+              ],
+              "indirect": [
+                "lender_disclosure",
+                "credit"
+              ]
+            },
+            "cure": "n/a (not a default)",
+            "consequence": "Purchaser may stop buying; Seller delivers within 3 business days a schedule of ALL receivables financings and invoice-level data; Purchaser may verify every outstanding invoice with account debtors at the Seller's cost"
+          }
         ],
         "termination_events": [
-          {"id": "TE-INS", "label": "Seller / servicer insolvency", "description": "Seller or servicer files (or has filed against it, undismissed 60 days) a bankruptcy petition or admits it cannot pay its debts.", "evidence": {"direct": ["insolvency"], "requires_text": "filing", "indirect": ["funding"]}, "severe": true, "cure": "none", "consequence": "facility terminates; from the petition date the automatic stay applies and the debtor may claim the purchased invoices as estate property"},
-          {"id": "TE-FRAUD", "label": "Double-factoring / fraud", "description": "A purchased invoice was also sold, factored or pledged to someone else (double-factoring), is fictitious, or had already been paid; any fraud by the Seller.", "evidence": {"direct": ["fraud"], "indirect": ["diligence_red_flag", "lender_disclosure"]}, "severe": true, "cure": "none", "consequence": "Termination Event; Seller must repurchase affected invoices at face"},
-          {"id": "TE-SERV", "label": "Servicer default / goes silent", "description": "Servicer fails to remit collections within 2 business days, to deliver reports or to answer information requests, or suspends operations.", "evidence": {"direct": ["operations"], "indirect": ["funding"]}, "severe": true, "cure": "2 business days", "consequence": "Termination Event; Purchaser may replace the servicer and notify account debtors"},
-          {"id": "TE-XDEF", "label": "Cross-default / creditor standstill", "description": "Default, acceleration or exercise of remedies under Seller indebtedness above $25M, or a payment standstill / forbearance with its lenders.", "evidence": {"direct": ["lender_action"], "indirect": ["funding", "credit"]}, "severe": true, "cure": "none", "consequence": "Termination Event"},
-          {"id": "TE-DIL", "label": "Dilution / default ratios", "description": "Dilution above 5% or defaulted receivables above 3% (3-month average), or an account debtor concentration breach.", "evidence": {"direct": [], "indirect": ["operations"]}, "observable": false, "cure": "none", "consequence": "Termination Event; reserve increases"}
+          {
+            "id": "TE-INS",
+            "label": "Seller / servicer insolvency",
+            "description": "Seller or servicer files (or has filed against it, undismissed 60 days) a bankruptcy petition or admits it cannot pay its debts.",
+            "evidence": {
+              "direct": [
+                "insolvency"
+              ],
+              "requires_text": "filing",
+              "indirect": [
+                "funding"
+              ]
+            },
+            "severe": true,
+            "cure": "none",
+            "consequence": "facility terminates; from the petition date the automatic stay applies and the debtor may claim the purchased invoices as estate property"
+          },
+          {
+            "id": "TE-FRAUD",
+            "label": "Double-factoring / fraud",
+            "description": "A purchased invoice was also sold, factored or pledged to someone else (double-factoring), is fictitious, or had already been paid; any fraud by the Seller.",
+            "evidence": {
+              "direct": [
+                "fraud"
+              ],
+              "indirect": [
+                "diligence_red_flag",
+                "lender_disclosure"
+              ]
+            },
+            "severe": true,
+            "cure": "none",
+            "consequence": "Termination Event; Seller must repurchase affected invoices at face"
+          },
+          {
+            "id": "TE-SERV",
+            "label": "Servicer default / goes silent",
+            "description": "Servicer fails to remit collections within 2 business days, to deliver reports or to answer information requests, or suspends operations.",
+            "evidence": {
+              "direct": [
+                "operations"
+              ],
+              "indirect": [
+                "funding"
+              ]
+            },
+            "severe": true,
+            "cure": "2 business days",
+            "consequence": "Termination Event; Purchaser may replace the servicer and notify account debtors"
+          },
+          {
+            "id": "TE-XDEF",
+            "label": "Cross-default / creditor standstill",
+            "description": "Default, acceleration or exercise of remedies under Seller indebtedness above $25M, or a payment standstill / forbearance with its lenders.",
+            "evidence": {
+              "direct": [
+                "lender_action"
+              ],
+              "indirect": [
+                "funding",
+                "credit"
+              ]
+            },
+            "severe": true,
+            "cure": "none",
+            "consequence": "Termination Event"
+          },
+          {
+            "id": "TE-DIL",
+            "label": "Dilution / default ratios",
+            "description": "Dilution above 5% or defaulted receivables above 3% (3-month average), or an account debtor concentration breach.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations"
+              ]
+            },
+            "observable": false,
+            "cure": "none",
+            "consequence": "Termination Event; reserve increases"
+          }
         ],
-        "mac_clause": {"id": "MAC", "label": "Material adverse change", "description": "A material adverse change in the Seller's business or in the collectability of the purchased invoices; also a condition to each purchase.", "evidence": {"direct": ["insolvency", "fraud", "operations", "lender_action"], "indirect": ["credit", "diligence_red_flag", "lender_disclosure", "funding"]}, "max_status": "possible", "cure": "n/a", "consequence": "purchase condition fails (purchases are discretionary anyway); hard to prove as a termination event on its own"},
+        "mac_clause": {
+          "id": "MAC",
+          "label": "Material adverse change",
+          "description": "A material adverse change in the Seller's business or in the collectability of the purchased invoices; also a condition to each purchase.",
+          "evidence": {
+            "direct": [
+              "insolvency",
+              "fraud",
+              "operations",
+              "lender_action"
+            ],
+            "indirect": [
+              "credit",
+              "diligence_red_flag",
+              "lender_disclosure",
+              "funding"
+            ]
+          },
+          "max_status": "possible",
+          "cure": "n/a",
+          "consequence": "purchase condition fails (purchases are discretionary anyway); hard to prove as a termination event on its own"
+        },
         "cash_management": {
           "collections": "Account debtors pay into a Seller-owned collection account under a springing DACA in the Purchaser's favor; the servicer remits weekly.",
-          "springing_dominion": {"id": "CASH-DOM", "label": "Springing cash dominion / notification", "description": "Springs on any Termination Event.", "derived_from": ["TE-*"], "cure": "n/a", "consequence": "daily remittance; DACA activation; the Purchaser may notify account debtors to pay it directly (UCC 9-406: after notice, paying the Seller no longer discharges the debt)"},
+          "springing_dominion": {
+            "id": "CASH-DOM",
+            "label": "Springing cash dominion / notification",
+            "description": "Springs on any Termination Event.",
+            "derived_from": [
+              "TE-*"
+            ],
+            "cure": "n/a",
+            "consequence": "daily remittance; DACA activation; the Purchaser may notify account debtors to pay it directly (UCC 9-406: after notice, paying the Seller no longer discharges the debt)"
+          },
           "preference_consideration": "For counsel: if the sale is recharacterized as a secured loan, collections redirected in the 90 days before a petition can face preference claims (11 U.S.C. 547)."
         },
         "collateral_custody": {
           "ucc": "UCC-1 against the Seller and each selling subsidiary covering the sold accounts; first-to-file decides priority if invoices were sold twice",
           "invoice_verification": "10% sample confirmed with account debtors each quarter; 100% after a Review Event",
           "account_debtor_notification": "notices of assignment pre-signed and held in escrow; sent only after a Termination Event",
-          "double_factoring_checks": ["confirm each invoice directly with the account debtor (amount, due date, no other notice of assignment, not yet paid)", "UCC search for other financing statements covering accounts", "compare invoice numbers with other financiers through counsel"]
+          "double_factoring_checks": [
+            "confirm each invoice directly with the account debtor (amount, due date, no other notice of assignment, not yet paid)",
+            "UCC search for other financing statements covering accounts",
+            "compare invoice numbers with other financiers through counsel"
+          ]
+        }
+      }
+    },
+    {
+      "id": "abf-004",
+      "name": "Carvana Auto Receivables Trust 2026-P, Class A notes",
+      "asset_class": "ABF",
+      "facility_type": "ABS senior notes",
+      "collateral": "prime/near-prime auto loan pool",
+      "commitment_usd": 25000000,
+      "hypothetical": true,
+      "notes": "HYPOTHETICAL position in an illustrative deal name; size and every term invented.",
+      "counterparties": [
+        {
+          "id": "carvana",
+          "relationship": "sponsor + servicer"
+        }
+      ],
+      "terms": {
+        "_hypothetical": "MOCK terms invented for this demo; the deal name is illustrative, the position size and every term below are not taken from any real documents.",
+        "playbook": "abs_notes",
+        "deal": {
+          "issuer": "Carvana Auto Receivables Trust 2026-P (bankruptcy-remote trust)",
+          "class": "Class A (senior), most senior class",
+          "position_usd": 25000000,
+          "sponsor_servicer": "Carvana",
+          "indenture_trustee": "Indenture Trustee named in the deal (unnamed here)",
+          "backup_servicer": "backup servicer named in the deal (verify in the documents)"
+        },
+        "noteholder_rights": {
+          "acts_through": "the Indenture Trustee only; a Class A holder has no direct enforcement right against the servicer or the sponsor",
+          "controlling_class": "Class A while outstanding",
+          "direction_threshold": "holders of a majority of the Controlling Class outstanding principal",
+          "servicer_removal": "the Indenture Trustee may, and at the direction of a majority of the Controlling Class shall, terminate the servicer after a Servicer Termination Event",
+          "class_b_alone": "a Class A holder alone can direct the trustee only if it holds a majority of the Class A outstanding principal",
+          "no_action_clause": "suit only if holders of 25% or more of the Controlling Class request the trustee in writing, offer indemnity, and the trustee does not act within 60 days",
+          "amendments": "changes to payment terms need each affected holder; other amendments a majority of each class",
+          "information": "monthly servicer report, trustee notices, investor reporting site"
+        },
+        "events_of_default": [
+          {
+            "id": "EOD-IND",
+            "label": "Indenture event of default",
+            "description": "Failure to pay interest on the Controlling Class within 5 business days, principal at final maturity, or an insolvency of the Issuer (trust). A sponsor/servicer bankruptcy is NOT itself an indenture default: the trust is bankruptcy-remote.",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "operations",
+                "insolvency"
+              ]
+            },
+            "observable": false,
+            "cure": "5 business days (interest)",
+            "consequence": "acceleration at the direction of a majority of the Controlling Class; Class A is the Controlling Class"
+          }
+        ],
+        "servicer": {
+          "servicer": "Carvana",
+          "backup_servicer": "named in the deal; transition on the Indenture Trustee's notice",
+          "termination_events": [
+            {
+              "id": "STE-INS",
+              "label": "Servicer insolvency",
+              "description": "Insolvency event of the servicer.",
+              "evidence": {
+                "direct": [
+                  "insolvency"
+                ],
+                "requires_text": "filing",
+                "indirect": [
+                  "funding"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "trustee may (at Controlling Class direction shall) terminate the servicer; after a petition, ipso facto termination generally needs bankruptcy-court relief"
+            },
+            {
+              "id": "STE-REMIT",
+              "label": "Failure to deposit collections",
+              "description": "Servicer fails to deposit collections into the trust collection account within 2 business days.",
+              "evidence": {
+                "direct": [],
+                "indirect": [
+                  "operations",
+                  "lender_action"
+                ]
+              },
+              "observable": false,
+              "cure": "2 business days (5 after notice)",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-OPS",
+              "label": "Servicer stops servicing",
+              "description": "Servicer suspends servicing or loses the staff or systems to service.",
+              "evidence": {
+                "direct": [
+                  "operations"
+                ],
+                "indirect": []
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            },
+            {
+              "id": "STE-FRAUD",
+              "label": "Servicer fraud / misreporting",
+              "description": "Fraud or material misstatement in servicer reports, or misapplied collections.",
+              "evidence": {
+                "direct": [
+                  "fraud"
+                ],
+                "indirect": [
+                  "diligence_red_flag"
+                ]
+              },
+              "severe": true,
+              "cure": "none",
+              "consequence": "Servicer Termination Event"
+            }
+          ]
+        },
+        "performance_triggers": [
+          {
+            "id": "PERF-CNL",
+            "label": "Cumulative net loss trigger",
+            "description": "Cumulative net losses above the schedule; the waterfall turns fully sequential (senior classes paid first).",
+            "evidence": {
+              "direct": [],
+              "indirect": [
+                "credit",
+                "operations"
+              ]
+            },
+            "observable": false,
+            "cure": "none",
+            "consequence": "sequential pay; senior Class A is paid down first"
+          }
+        ],
+        "sponsor_reps": [
+          {
+            "id": "REP-REPURCHASE",
+            "label": "Sponsor rep breach (repurchase)",
+            "description": "Receivables that were ineligible when sold to the trust (fictitious, double-pledged, not perfected) must be repurchased by the sponsor.",
+            "evidence": {
+              "direct": [
+                "fraud"
+              ],
+              "indirect": [
+                "lender_action"
+              ]
+            },
+            "cure": "repurchase within 30 days of discovery",
+            "consequence": "repurchase claim against the sponsor, only as good as the sponsor's credit"
+          }
+        ],
+        "cash_management": {
+          "collection_account": "segregated trust account in the Indenture Trustee's name",
+          "servicer_remittance": "within 2 business days of receipt: collections sit with the servicer meanwhile (commingling risk if it fails)",
+          "waterfall": "pro rata principal until a performance trigger, then sequential"
+        },
+        "collateral_custody": {
+          "titles": "certificates of title held by the custodian named in the deal, lien noted in the trust's (or its designee's) favor",
+          "true_sale": "receivables sold by the sponsor to the depositor and then the trust; true-sale and non-consolidation opinions at closing"
         }
       }
     }

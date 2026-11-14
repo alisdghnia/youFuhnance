@@ -85,9 +85,11 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;co
       <input type="range" id="slider" min="0" value="0">
       <button id="theme" title="Toggle light/dark">Theme</button>
     </div>
-    <div class="tb2"><span id="status"></span><div class="lead" id="heads"></div></div>
+    <div class="tb2"><span id="live" class="chip2 b-bad" style="display:none;background:var(--bad);color:#fff">LIVE — outcome unknown</span><span id="status"></span><div class="lead" id="heads"></div></div>
     <div class="tl" id="tl"></div>
   </div>
+
+  <div class="card" id="exec" style="margin:12px 0"></div>
 
   <div class="grid">
     <div class="col">
@@ -114,6 +116,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const fmtD = d => new Date(d + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
 const money = x => '$' + Math.round(x / 1e6) + 'M';
 let cp = Object.keys(D.cps)[0], idx = 0, timer = null;
+const DT = () => D.cps[cp].dates || D.dates;
 
 const lvlBadge = l => `<span class="badge ${l==='ALERT'?'b-bad':l==='watch'?'b-warn':'b-neu'}">${esc(l)}</span>`;
 const verdictBadge = v => `<span class="badge ${v==='confirmed'?'b-ok':v==='corroborated'?'b-ok':v==='weakly_corroborated'?'b-warn':'b-neu'}">${esc(String(v).replace('_',' '))}</span>`;
@@ -137,6 +140,7 @@ function mdLite(md) {
 function heads() {
   $('heads').innerHTML = Object.entries(D.cps).map(([id, c]) => {
     const m = c.marks || {};
+    if (c.live) return `<span><b>${esc(c.name)}: LIVE, outcome unknown</b> (no filing date, no hindsight marks)</span>`;
     return `<span>${esc(c.name)} (hindsight): <b>${m.lead_days_to_filing ?? '–'}d</b> ALERT→filing · <b>${m.lead_sessions != null ? '+' + m.lead_sessions : '–'}</b> sessions ALERT→market break</span>`;
   }).join('');
 }
@@ -147,7 +151,7 @@ function statusChip(day) {
   $('status').innerHTML = `<span class="chip2 ${cls}">${esc(lv === 'log' ? 'quiet' : lv)}${w ? ' · window ' + esc(w.toUpperCase()) : ''}${st ? ' · covenant stage ' + st + '/4' : ''}</span>`;
 }
 function timeline() {
-  const c = D.cps[cp], m = c.marks || {}, dates = D.dates, cur = dates[idx];
+  const c = D.cps[cp], m = c.marks || {}, dates = DT(), cur = dates[idx];
   const t = s => new Date(s + 'T00:00:00').getTime();
   // only marks the team could know on this day (no spoilers); same-date marks share one marker and one label
   const raw = [['First WATCH', m.first_watch, 'var(--warn)', m.first_watch && m.first_watch <= cur], ['First verified ALERT', m.first_alert, 'var(--bad)', m.first_alert && m.first_alert <= cur],
@@ -173,10 +177,10 @@ const SER = ['#3b5bdb', '#e8590c', '#2b8a3e', '#9c36b5', '#0c8599', '#c2255c'];
 const WCOL = {open: 'var(--wo)', closing: 'var(--wc)', closed: 'var(--wx)'};
 function nextTradingDate(ms, i) { return ms.dates[i + 1] || null; }
 function chartSvg() {
-  const c = D.cps[cp], ms = c.ms, d = D.dates[idx], svg = $('chart');
+  const c = D.cps[cp], ms = c.ms, d = DT()[idx], svg = $('chart');
   if (!ms) { svg.setAttribute('viewBox', '0 0 1000 40'); svg.innerHTML = '<text x="10" y="24">No market data in this database.</text>'; $('asof').innerHTML = ''; return; }
   const W = 1000, L = 74, R = 64, t = s => new Date(s + 'T00:00:00').getTime(), DAY = 864e5;
-  const t0 = t(D.dates[0]), t1 = t(D.dates[D.dates.length - 1]) + DAY;
+  const t0 = t(DT()[0]), t1 = t(DT()[DT().length - 1]) + DAY;
   const X = s => L + (t(s) - t0) / (t1 - t0) * (W - L - R), xT = X(d);
   const vis = []; ms.dates.forEach((x, i) => { if (x < d) vis.push(i); });      // sessions that closed before today only
   const direct = ms.tickers.filter(x => x.direct), ctx = ms.tickers.filter(x => x.ctx);
@@ -193,7 +197,7 @@ function chartSvg() {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   let o = '';
   // week grid + axis labels
-  const mondays = []; for (let q = 0; q < D.dates.length; q++) if (new Date(D.dates[q] + 'T00:00:00').getDay() === 1 || q === 0) mondays.push(D.dates[q]);
+  const mondays = []; for (let q = 0; q < DT().length; q++) if (new Date(DT()[q] + 'T00:00:00').getDay() === 1 || q === 0) mondays.push(DT()[q]);
   mondays.forEach(x => { o += `<line x1="${X(x)}" x2="${X(x)}" y1="${y1}" y2="${y3 + h3}" stroke="var(--line)" stroke-width="1"/><text x="${X(x)}" y="${y3 + h3 + 16}" text-anchor="middle">${fmtD(x)}</text>`; });
   // 1) cumulative abnormal return
   let lo = 0, hi = 0;
@@ -265,6 +269,11 @@ function pinTip(e) {
   const r = $('cwrap').getBoundingClientRect(); tip.style.display = 'block';
   tip.style.left = Math.max(0, Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth)) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px';
 }
+function execSummary(day, d) {
+  const S = day.summary, L = [['News', S.news], ['Verifier', S.verifier], ['Market', S.market], ['Covenant', S.covenant], ['Team', S.team]];
+  $('exec').innerHTML = `<h2 class="sec">Executive summary — ${esc(fmtD(d))}</h2><div style="font-weight:700;font-size:16px;margin:4px 0 8px">${esc(S.headline)}</div>` +
+    L.map(x => `<div style="font-size:13px;margin:3px 0"><b>${x[0]}:</b> ${esc(x[1])}</div>`).join('') + '<div class="cav" style="margin-top:6px">Rule-based from the as-of data below, no LLM. Analysis, not advice.</div>';
+}
 function teamPanel(day) {
   const T = day.team;
   $('team').innerHTML = `<h3>What changed since yesterday</h3>` + (T.changes.length ? `<ul>${T.changes.map(x => `<li>${esc(x.text)} <span class="ev2">[${esc(x.evidence)}]</span></li>`).join('')}</ul>` : '<div class="empty" style="margin-bottom:6px">No new verified event, window flip or market trigger.</div>') +
@@ -272,9 +281,9 @@ function teamPanel(day) {
 }
 
 function render() {
-  const c = D.cps[cp], d = D.dates[idx], day = c.days[d];
+  const c = D.cps[cp], d = DT()[idx], day = c.days[d];
   $('date').textContent = new Date(d + 'T00:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
-  $('slider').value = idx;
+  $('slider').max = DT().length - 1; $('slider').value = idx; $('live').style.display = c.live ? '' : 'none';
   timeline(); statusChip(day);
   // events
   const evs = day.events.slice().sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0) || String(b.alerted_as_of || b.watch_as_of || '').localeCompare(String(a.alerted_as_of || a.watch_as_of || '')) || b.severity - a.severity);
@@ -301,26 +310,25 @@ function render() {
   // actions
   $('actions').innerHTML = day.actions.length ? day.actions.map(a => `<div style="padding:4px 0;border-top:1px solid var(--line)"><span class="badge b-neu">${esc(a.sender)}</span> ${a.today ? '<span class="badge b-bad">NEW</span> ' : ''}${a.stage ? `<span class="badge b-warn">${esc(a.stage)}</span> ` : ''}<span class="cav">${esc(a.as_of)}</span><div>${esc(a.summary)}</div></div>`).join('') : '<div class="empty">No desk actions yet.</div>';
   $('brief').innerHTML = mdLite(day.brief);
-  teamPanel(day); chartSvg(); sizeBar();
+  execSummary(day, d); teamPanel(day); chartSvg(); sizeBar();
 }
 
 function sizeBar() { document.documentElement.style.setProperty('--tbh', $('topbar').offsetHeight + 'px'); }
 addEventListener('resize', sizeBar);
-function go(i) { idx = Math.max(0, Math.min(D.dates.length - 1, i)); render(); }
+function go(i) { idx = Math.max(0, Math.min(DT().length - 1, i)); render(); }
 $('cp').innerHTML = Object.entries(D.cps).map(([id, c]) => `<option value="${id}">${esc(c.name)}</option>`).join('');
-$('cp').onchange = e => { cp = e.target.value; render(); };
-$('slider').max = D.dates.length - 1;
+$('cp').onchange = e => { cp = e.target.value; idx = D.cps[cp].live ? DT().length - 1 : 0; render(); };
 $('slider').oninput = e => { stop(); go(+e.target.value); };
 $('prev').onclick = () => { stop(); go(idx - 1); };
 $('next').onclick = () => { stop(); go(idx + 1); };
 function tick() {
-  if (idx >= D.dates.length - 1) return stop();
+  if (idx >= DT().length - 1) return stop();
   go(idx + 1);
-  const dow = new Date(D.dates[idx] + 'T00:00:00').getDay();      // weekends fast-forward: one trading day per beat
+  const dow = new Date(DT()[idx] + 'T00:00:00').getDay();      // weekends fast-forward: one trading day per beat
   timer = setTimeout(tick, +$('speed').value / (dow === 6 || dow === 0 ? 3 : 1));
 }
 function stop() { if (timer) { clearTimeout(timer); timer = null; } $('play').textContent = 'Play ▶'; }
-$('play').onclick = () => { if (timer) return stop(); if (idx >= D.dates.length - 1) idx = 0; $('play').textContent = 'Pause ❚❚'; timer = setTimeout(tick, +$('speed').value); };
+$('play').onclick = () => { if (timer) return stop(); if (idx >= DT().length - 1) idx = 0; $('play').textContent = 'Pause ❚❚'; timer = setTimeout(tick, +$('speed').value); };
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'SELECT' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(idx + 1); }
@@ -329,8 +337,8 @@ document.addEventListener('keydown', e => {
 });
 $('chart').addEventListener('mousemove', pinTip); $('chart').addEventListener('mouseleave', () => { $('ptip').style.display = 'none'; });
 $('theme').onclick = () => { const r = document.documentElement, dark = getComputedStyle(r).getPropertyValue('--bg').trim() === '#0e1116'; r.dataset.theme = dark ? 'light' : 'dark'; };
-$('foot').textContent = D.disclaimer + ' Hypothetical portfolio; market proxies were chosen with hindsight.';
-(function () { const h = new URLSearchParams(location.hash.slice(1)); if (h.get('cp') && D.cps[h.get('cp')]) { cp = h.get('cp'); $('cp').value = cp; } if (h.get('d') && D.dates.includes(h.get('d'))) idx = D.dates.indexOf(h.get('d')); })();
+$('foot').textContent = D.disclaimer + ' Hypothetical portfolio; market proxies for the two replays were chosen with hindsight (Carvana is a live case: no hindsight).';
+(function () { const h = new URLSearchParams(location.hash.slice(1)); if (h.get('cp') && D.cps[h.get('cp')]) { cp = h.get('cp'); $('cp').value = cp; } if (D.cps[cp].live) idx = DT().length - 1; if (h.get('d') && DT().includes(h.get('d'))) idx = DT().indexOf(h.get('d')); })();
 heads(); render();
 </script>
 </body>
