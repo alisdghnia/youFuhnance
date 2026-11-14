@@ -16,14 +16,10 @@ python3 scripts/brief.py --as-of 2025-09-07 --counterparty tricolor --db path/to
 5. **Action layer (25s).** Click "Action brief" on Sep 9 and Sep 25: affected positions and exposure, market window, hedge candidates, and the covenant desk's checklist (draw stop, reservation of rights...). Close: "alert, proof, price, next step, before the filing".
 
 ## What to click
-- Header cards: the two lead-time numbers.
-- Counterparty selector: Tricolor, then First Brands.
-- Slider (or Play): Sep 2 (First Brands ALERT) -> Sep 6 watch -> Sep 7 Tricolor ALERT -> Sep 9 -> Sep 10 filing -> Sep 20-25.
-- Timeline strip: first WATCH, first ALERT, market break, filing (each appears only once the slider reaches it).
-- Evidence charts under the controls move with the slider (future is blank): abnormal return per proxy, open/closing/closed heatmap, Markov/BOCPD probabilities, news pins (hover: headline, verdict, tier, receipt quote). Try Tricolor Sep 5 -> 7 -> 10 and First Brands Sep 2 -> 22.
-- "Today for the team": what changed since yesterday + 2-4 rule-based discussion prompts, each with its evidence.
+- Sticky top bar: counterparty, slider/Play, status chip for the day (e.g. "ALERT · window CLOSING · covenant stage 2/4") and the small lead-time numbers.
+- Left (60%, decision material): the three market charts (returns + news pins, window heatmap, probabilities; future is blank), then "Today for the team", then the action checklist (covenant actions + hedge candidates). Try Tricolor Sep 5 -> 7 -> 10 and First Brands Sep 2 -> 22.
+- Right (40%, own scroll): live feed, newest first: verified events (verdict badges, tier chips, receipt quotes/links), then agent messages (who -> topic). Today's new items are highlighted.
 - Play (speed 0.5x-4x), Space = play/pause, left/right arrows = step a day. Deep link: `dashboard.html#cp=tricolor&d=2025-09-07`.
-- Event cards: tier chips, quotes, source links. Feed: who -> topic.
 - Theme button toggles dark/light.
 
 ## Honest caveats
