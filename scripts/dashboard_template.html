@@ -9,7 +9,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1116;--card:#171b22;--ink:#e8ebf0;--mut:#9aa4b2;--line:#2a313c;--acc:#7c93ff;--ok:#4ade80;--okb:#12301f;--warn:#fbbf24;--warnb:#3a2d0b;--bad:#ff8a80;--badb:#3d1713;--neu:#b6bfcc;--neub:#232a34}}
 :root[data-theme=dark]{--bg:#0e1116;--card:#171b22;--ink:#e8ebf0;--mut:#9aa4b2;--line:#2a313c;--acc:#7c93ff;--ok:#4ade80;--okb:#12301f;--warn:#fbbf24;--warnb:#3a2d0b;--bad:#ff8a80;--badb:#3d1713;--neu:#b6bfcc;--neub:#232a34}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
-.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 48px}
+.wrap{width:100%;padding:0 20px 40px}
 h1{font-size:20px;margin:0}h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 10px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .sub{color:var(--mut);margin:2px 0 0}
@@ -18,11 +18,23 @@ button,select{font:inherit;color:var(--ink);background:var(--card);border:1px so
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .big{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap}.num{font-size:34px;font-weight:700;line-height:1}.num small{font-size:13px;font-weight:500;color:var(--mut)}
 .lbl{color:var(--mut);font-size:12px;margin-top:4px}
-.ctl{display:grid;gap:10px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0}
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 14px;padding:8px 20px 6px;display:grid;gap:4px}
+.tb1,.tb2{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap}
+.tb1 h1{font-size:15px;white-space:nowrap}.tb2 .lead{margin-left:auto;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mut)}.lead b{color:var(--ink);font-size:13px}
+.chip2{display:inline-flex;gap:8px;align-items:center;padding:4px 14px;border-radius:99px;font-weight:700;font-size:13px;border:1px solid transparent;white-space:nowrap}
+.chip2.b-bad{border-color:var(--bad)}.chip2.b-warn{border-color:var(--warn)}.chip2.b-neu{border-color:var(--line)}
+.tl{margin-top:0}
+.sec{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:0 0 10px;padding-left:8px;border-left:3px solid var(--acc)}
+.sub2{font-size:11.5px;color:var(--mut);margin:-6px 0 8px 11px}
+.ev.fresh,.feed div.fresh{background:var(--warnb);box-shadow:-3px 0 0 var(--warn);padding-left:8px}
+.rcol{position:sticky;top:var(--tbh,110px);align-self:start;max-height:calc(100vh - var(--tbh,110px) - 12px);overflow:auto;display:grid;gap:14px}
+.mini{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+details.card>summary{cursor:pointer;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+
 .ctlrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 input[type=range]{flex:1;min-width:200px;accent-color:var(--acc)}
 .date{font-weight:700;font-size:18px;min-width:120px}
-.tl{position:relative;height:64px;margin:4px 6px 0}
+.tl{position:relative;height:64px;margin:4px 6px 0;display:none}
 .tl .axis{position:absolute;left:0;right:0;top:30px;height:3px;background:var(--line);border-radius:2px}
 .tl .fill{position:absolute;left:0;top:30px;height:3px;background:var(--acc);border-radius:2px}
 .tl .cur{position:absolute;top:22px;width:2px;height:19px;background:var(--ink)}
@@ -30,8 +42,8 @@ input[type=range]{flex:1;min-width:200px;accent-color:var(--acc)}
 .mk i{display:block;width:11px;height:11px;border-radius:50%;margin:25px auto 0;border:2px solid var(--card)}
 .mk.up{top:-2px}.mk.up i{margin:0 auto 4px;order:2}
 .mk b{color:var(--ink);font-weight:600}
-.grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;margin-top:6px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;align-items:start}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.rcol{position:static;max-height:none;overflow:visible}.topbar{position:static}}
 .col{display:grid;gap:14px;align-content:start}
 .badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid transparent;white-space:nowrap}
 .b-ok{background:var(--okb);color:var(--ok)}.b-warn{background:var(--warnb);color:var(--warn)}.b-bad{background:var(--badb);color:var(--bad)}.b-neu{background:var(--neub);color:var(--neu)}
@@ -49,7 +61,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;co
 .cav{color:var(--mut);font-size:11.5px}
 .brief{font-size:13px}.brief h2.mdh{font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);margin:10px 0 4px}.brief ul{margin:2px 0 6px 18px;padding:0}.brief blockquote{margin:2px 0 2px 6px;padding-left:8px;border-left:3px solid var(--line);color:var(--mut)}
 .empty{color:var(--mut)}
-#cwrap{position:relative}#chart{width:100%;height:auto;display:block}
+#cwrap{position:relative;width:100%}#chart{width:100%;height:auto;display:block}
 #chart text{font-family:inherit;fill:var(--mut);font-size:10.5px}#chart .tt{fill:var(--ink);font-weight:600}
 .ptip{position:absolute;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:9;display:none}
 .ptip .q{margin-top:4px}
@@ -64,36 +76,32 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;co
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <div><h1>youFuhnance — Ground Truth replay</h1>
-    <p class="sub">Live-web agents with receipts for a private-credit (ABF) deal team. Hypothetical portfolio; every panel is strictly as-of the slider date.</p></div>
-    <button id="theme" title="Toggle light/dark">Theme</button>
-  </div>
-  <div class="heads" id="heads"></div>
-
-  <div class="ctl card">
-    <div class="ctlrow">
+  <div class="topbar" id="topbar">
+    <div class="tb1">
+      <h1>youFuhnance</h1>
       <label>Counterparty <select id="cp"></select></label>
       <span class="date" id="date"></span>
       <button id="prev" title="Left arrow">◀</button><button id="play" title="Space">Play ▶</button><button id="next" title="Right arrow">▶</button><select id="speed" title="Play speed"><option value="2200">0.5x</option><option value="1100" selected>1x</option><option value="550">2x</option><option value="275">4x</option></select>
       <input type="range" id="slider" min="0" value="0">
+      <button id="theme" title="Toggle light/dark">Theme</button>
     </div>
+    <div class="tb2"><span id="status"></span><div class="lead" id="heads"></div></div>
     <div class="tl" id="tl"></div>
   </div>
 
-  <div class="card" style="margin-top:6px"><h2>What the market and the news showed on this day (as-of; future is blank)</h2><div class="asof" id="asof"></div><div id="cwrap"><svg id="chart" role="img" aria-label="market evidence charts"></svg><div class="ptip" id="ptip"></div></div></div>
-
   <div class="grid">
     <div class="col">
-      <div class="card team"><h2>Today for the team</h2><div id="team"></div></div>
-      <div class="card"><h2>Events as of this day</h2><div id="events"></div></div>
-      <div class="card"><h2>Agent message feed (who → topic)</h2><div class="feed" id="feed"></div></div>
+      <div class="card"><h2 class="sec">Market evidence (as-of; future is blank)</h2><div class="asof" id="asof"></div><div id="cwrap"><svg id="chart" role="img" aria-label="market evidence charts"></svg><div class="ptip" id="ptip"></div></div></div>
+      <div class="card team"><h2 class="sec">Today for the team</h2><div id="team"></div></div>
+      <div class="card"><h2 class="sec">Action checklist</h2>
+        <div class="sub2">Covenant desk actions</div><div id="actions"></div>
+        <div class="sub2" style="margin-top:12px">Market window and hedge candidates</div><div id="market"></div></div>
+      <div class="card"><h2 class="sec">Exposure (hypothetical)</h2><div id="pos"></div></div>
+      <details class="card"><summary>Full action brief</summary><div class="brief" id="brief"></div></details>
     </div>
-    <div class="col">
-      <div class="card"><h2>Market window</h2><div id="market"></div></div>
-      <div class="card"><h2>Exposure (hypothetical)</h2><div id="pos"></div></div>
-      <div class="card"><h2>Desk actions</h2><div id="actions"></div></div>
-      <div class="card"><h2>Action brief</h2><div class="brief" id="brief"></div></div>
+    <div class="rcol" id="rcol">
+      <div class="card"><h2 class="sec">Verified events (newest first)</h2><div id="events"></div></div>
+      <div class="card"><h2 class="sec">Agent messages (who → topic)</h2><div class="feed" id="feed"></div></div>
     </div>
   </div>
   <p class="foot" id="foot"></p>
@@ -128,15 +136,16 @@ function mdLite(md) {
 
 function heads() {
   $('heads').innerHTML = Object.entries(D.cps).map(([id, c]) => {
-    const m = c.marks;
-    const lead = m.lead_days_to_filing, ls = m.lead_sessions;
-    return `<div class="card"><h2>${esc(c.name)} · result in hindsight</h2><div class="big">
-      <div><div class="num">${lead ?? '–'}<small> days</small></div><div class="lbl">first verified ALERT ${m.first_alert ? fmtD(m.first_alert) : '–'} → filing ${m.filing ? fmtD(m.filing) : '–'}</div></div>
-      <div><div class="num">${ls != null ? '+' + ls : '–'}<small> sessions</small></div><div class="lbl">ALERT → first market-proxy break${m.break_ticker ? ' (' + esc(m.break_ticker) + ', ' + fmtD(m.market_break) + ')' : ''}</div></div>
-      </div></div>`;
+    const m = c.marks || {};
+    return `<span>${esc(c.name)} (hindsight): <b>${m.lead_days_to_filing ?? '–'}d</b> ALERT→filing · <b>${m.lead_sessions != null ? '+' + m.lead_sessions : '–'}</b> sessions ALERT→market break</span>`;
   }).join('');
 }
-
+function statusChip(day) {
+  const lv = day.level, w = day.market && day.market.window;
+  const st = Math.max(0, ...day.actions.map(a => +((/stage (\d)/.exec(a.summary) || [])[1] || 0)));
+  const cls = lv === 'ALERT' ? 'b-bad' : lv === 'watch' ? 'b-warn' : 'b-neu';
+  $('status').innerHTML = `<span class="chip2 ${cls}">${esc(lv === 'log' ? 'quiet' : lv)}${w ? ' · window ' + esc(w.toUpperCase()) : ''}${st ? ' · covenant stage ' + st + '/4' : ''}</span>`;
+}
 function timeline() {
   const c = D.cps[cp], m = c.marks || {}, dates = D.dates, cur = dates[idx];
   const t = s => new Date(s + 'T00:00:00').getTime();
@@ -266,16 +275,16 @@ function render() {
   const c = D.cps[cp], d = D.dates[idx], day = c.days[d];
   $('date').textContent = new Date(d + 'T00:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
   $('slider').value = idx;
-  timeline();
+  timeline(); statusChip(day);
   // events
-  const evs = day.events.slice().sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0) || b.severity - a.severity);
-  $('events').innerHTML = evs.length ? evs.map(e => `<div class="ev"><div class="hd">${lvlBadge(e.level)}${verdictBadge(e.verdict)}
+  const evs = day.events.slice().sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0) || String(b.alerted_as_of || b.watch_as_of || '').localeCompare(String(a.alerted_as_of || a.watch_as_of || '')) || b.severity - a.severity);
+  $('events').innerHTML = evs.length ? evs.map(e => `<div class="ev ${e.new ? 'fresh' : ''}"><div class="hd">${lvlBadge(e.level)}${verdictBadge(e.verdict)}
       ${e.new ? `<span class="badge b-bad">${e.escalated ? 'ESCALATED' : 'NEW'}</span>` : ''}<span class="badge b-neu">sev ${e.severity}</span><span class="badge b-neu">${esc(e.tag)}</span></div>
       <div class="t">${esc(e.headline)}</div>
       ${e.sources.map(s => `<div class="src"><span class="chip t${s.tier}">T${s.tier} ${esc(s.tier_name)}</span><div><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.domain)}</a> <span class="cav">${esc((s.published_at || '').slice(0, 10))}</span>${s.quote ? `<div class="q">“${esc(s.quote)}”</div>` : ''}</div></div>`).join('')}</div>`).join('')
     : '<div class="empty">No watch/ALERT-level events yet for this counterparty on this day.</div>';
   // feed
-  $('feed').innerHTML = day.feed.length ? day.feed.map(f => `<div><span class="badge b-neu">${esc(f.sender)}</span><span class="arrow">→</span><span class="badge b-neu">${esc(f.topic)}</span><span class="tx">${esc(f.text)}</span></div>`).join('') : '<div class="empty">No agent traffic on this day.</div>';
+  $('feed').innerHTML = day.feed.length ? day.feed.slice().reverse().map(f => `<div class="fresh"><span class="badge b-neu">${esc(f.sender)}</span><span class="arrow">→</span><span class="badge b-neu">${esc(f.topic)}</span><span class="tx">${esc(f.text)}</span></div>`).join('') : '<div class="empty">No agent traffic on this day.</div>';
   // market
   const m = day.market;
   if (!m) $('market').innerHTML = '<div class="empty">No market data in this database.</div>';
@@ -292,9 +301,11 @@ function render() {
   // actions
   $('actions').innerHTML = day.actions.length ? day.actions.map(a => `<div style="padding:4px 0;border-top:1px solid var(--line)"><span class="badge b-neu">${esc(a.sender)}</span> ${a.today ? '<span class="badge b-bad">NEW</span> ' : ''}${a.stage ? `<span class="badge b-warn">${esc(a.stage)}</span> ` : ''}<span class="cav">${esc(a.as_of)}</span><div>${esc(a.summary)}</div></div>`).join('') : '<div class="empty">No desk actions yet.</div>';
   $('brief').innerHTML = mdLite(day.brief);
-  teamPanel(day); chartSvg();
+  teamPanel(day); chartSvg(); sizeBar();
 }
 
+function sizeBar() { document.documentElement.style.setProperty('--tbh', $('topbar').offsetHeight + 'px'); }
+addEventListener('resize', sizeBar);
 function go(i) { idx = Math.max(0, Math.min(D.dates.length - 1, i)); render(); }
 $('cp').innerHTML = Object.entries(D.cps).map(([id, c]) => `<option value="${id}">${esc(c.name)}</option>`).join('');
 $('cp').onchange = e => { cp = e.target.value; render(); };
