@@ -22,7 +22,7 @@ import dashboard as DASH
 from youfin import market as M
 from youfin.agents import covenant as C
 
-DEFAULT_CASES = "tricolor:2025-09-05,tricolor:2025-09-07,first_brands:2025-09-02,first_brands:2025-09-19,tricolor:2025-09-09,first_brands:2025-09-20"
+DEFAULT_CASES = "tricolor:2025-09-05,tricolor:2025-09-07,first_brands:2025-09-02,first_brands:2025-09-19,tricolor:2025-09-09,first_brands:2025-09-20,carvana:2026-11-06"
 
 
 def truncate(src: Path, dst: Path, D: str) -> sqlite3.Connection:

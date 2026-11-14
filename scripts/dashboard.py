@@ -14,12 +14,15 @@ import demo_data as X  # noqa: E402
 
 def build(conn, cps=None, last=None, marks=True) -> dict:
     """cps: restrict counterparties; last: stop at this day (leak_check); marks: hindsight lead-time cards."""
-    dates = list(X.daterange(X.START, min(last or X.END, X.END)))
-    data = {"dates": dates, "disclaimer": X.DISCLAIMER, "cps": {}, "market": X.has_market(conn)}
+    dates0 = list(X.daterange(X.START, min(last or X.END, X.END)))
+    data = {"dates": dates0, "disclaimer": X.DISCLAIMER, "cps": {}, "market": X.has_market(conn)}
     for c in X.counterparties(conn):
         cp = c["id"]
         if cps and cp not in cps:
             continue
+        live = cp in X.LIVE
+        a, b = X.cp_range(cp)
+        dates = list(X.daterange(a, min(last or b, b))) if live else dates0
         ps, tot = X.exposure(conn, cp)
         ms = X.market_series(conn, cp) if data["market"] else None
         days, pins, seen = {}, [], set()
@@ -41,13 +44,14 @@ def build(conn, cps=None, last=None, marks=True) -> dict:
                                  "src": r.get("domain"), "tier": r.get("tier"), "tier_name": r.get("tier_name"),
                                  "quote": (r.get("quote") or "")[:240]})
                     seen.add(e["id"])
-            days[d] = {"team": X.team_at(conn, cp, c["name"], d, evs, ms, acts, prev_acts, tot, len(ps)), "events": evs, "level": ["log", "watch", "ALERT"][level],
+            team = X.team_at(conn, cp, c["name"], d, evs, ms, acts, prev_acts, tot, len(ps))
+            days[d] = {"team": team, "summary": X.summary_at(conn, cp, c["name"], d, evs, ms, team, tot, len(ps)), "events": evs, "level": ["log", "watch", "ALERT"][level],
                        "market": X.market_at(conn, cp, d) if level >= 1 or data["market"] else None,
                        "actions": acts, "feed": X.feed_at(conn, cp, d),
                        "brief": X.render_cp(conn, cp, c["name"], d)}
             prev_acts = acts
         data["cps"][cp] = {"name": c["name"], "role": c["role"], "sector": c["sector"], "positions": ps,
-                           "exposure": tot, "marks": X.study_marks(conn, cp) if marks else None, "days": days,
+                           "exposure": tot, "marks": X.study_marks(conn, cp) if marks and not live else None, "live": live, "dates": dates if live else None, "days": days,
                            "ms": ms, "pins": pins}
         print(f"built {cp}", flush=True)
     return data
