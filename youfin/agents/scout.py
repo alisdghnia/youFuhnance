@@ -55,6 +55,26 @@ def score(text: str, domain: str) -> tuple[int, list[str], list[str]]:
     return severity, tags, terms
 
 
+ARCHIVE_MIN_SEVERITY = 3  # only look up the Wayback Machine for signals this serious
+
+
+def score_as_of(title: str, description: str, live_text: str, domain: str, url: str,
+                as_of: date | str, archive) -> tuple[int, list[str], list[str], str, str]:
+    """Replay scoring without hindsight. Returns (severity, tags, terms, basis, text).
+
+    Today's snippets/markdown/highlights may mention later events, so they are never used.
+    If the page was archived at/before `as_of`, score title + description + that snapshot
+    ('snapshot'); otherwise title + description only ('title_desc').
+    """
+    base = " ".join([title or "", description or ""])
+    if score(live_text, domain)[0] >= ARCHIVE_MIN_SEVERITY:
+        snap, _, _ = archive.as_of_text(url, as_of)
+        if snap:
+            text = " ".join([base, snap])
+            return (*score(text, domain), "snapshot", text)
+    return (*score(base, domain), "title_desc", base)
+
+
 def _pub_date(page_age: str | None) -> date | None:
     if not page_age:
         return None
@@ -134,31 +154,51 @@ class Scout:
             "VALUES (?,?,?,?,?,?)",
             (url, title, r.get("description"), json.dumps(snippets), r.get("page_age"), domain),
         )
-        severity, tags, terms = score(text, domain)
+        basis = "live"
+        if mode == "replay":
+            severity, tags, terms, basis, _ = score_as_of(
+                title, r.get("description") or "", text, domain, url, as_of, self._archive())
+        else:
+            severity, tags, terms = score(text, domain)
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO signals (counterparty_id, url, published_at, first_seen_as_of, "
-            "run_id, severity, tags, matched_terms) VALUES (?,?,?,?,?,?,?,?)",
+            "run_id, severity, tags, matched_terms, score_basis) VALUES (?,?,?,?,?,?,?,?,?)",
             (cp_id, url, pub.isoformat() if pub else None, as_of.isoformat(), run_id,
-             severity, json.dumps(tags), json.dumps(terms)),
+             severity, json.dumps(tags), json.dumps(terms), basis),
         )
         if cur.rowcount == 0:
             return None  # already seen in an earlier sweep
         return NewSignal(cp_id, url, title, domain, pub.isoformat() if pub else None,
                          severity, tags, terms)
 
-    def retag(self) -> int:
-        """Re-score stored signals with the current rules (no API calls)."""
+    def _archive(self):
+        if getattr(self, "archive", None) is None:
+            from ..archive import Archive
+            self.archive = Archive(self.conn)
+        return self.archive
+
+    def retag(self, as_of_replay: bool = False) -> int:
+        """Re-score stored signals with the current rules (no You.com calls).
+
+        as_of_replay: score each signal on the text that existed on its first_seen_as_of
+        (Wayback snapshot, else title + description) instead of today's snippets."""
         rows = self.conn.execute(
-            "SELECT s.id, a.title, a.description, a.snippets, a.domain "
+            "SELECT s.id, s.url, s.first_seen_as_of, a.title, a.description, a.snippets, a.domain "
             "FROM signals s JOIN articles a USING (url)"
         ).fetchall()
         for r in rows:
             text = " ".join([r["title"] or "", r["description"] or "",
                              *json.loads(r["snippets"] or "[]")])
-            severity, tags, terms = score(text, r["domain"] or "")
+            if as_of_replay:
+                severity, tags, terms, basis, _ = score_as_of(
+                    r["title"] or "", r["description"] or "", text, r["domain"] or "",
+                    r["url"], r["first_seen_as_of"], self._archive())
+            else:
+                severity, tags, terms = score(text, r["domain"] or "")
+                basis = "live"
             self.conn.execute(
-                "UPDATE signals SET severity=?, tags=?, matched_terms=? WHERE id=?",
-                (severity, json.dumps(tags), json.dumps(terms), r["id"]),
+                "UPDATE signals SET severity=?, tags=?, matched_terms=?, score_basis=? WHERE id=?",
+                (severity, json.dumps(tags), json.dumps(terms), basis, r["id"]),
             )
         self.conn.commit()
         return len(rows)

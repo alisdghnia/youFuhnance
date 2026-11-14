@@ -22,7 +22,7 @@ from ..risk_tags import RULES
 from ..sources import publisher, tier
 from ..llm import Judge
 from ..youcom import YouClient
-from .scout import JUNK_DOMAINS, _pub_date, matches, score
+from .scout import JUNK_DOMAINS, _pub_date, matches, score, score_as_of
 
 TAG_PRIORITY = [
     "insolvency", "fraud", "lender_action", "operations", "diligence_red_flag",
@@ -194,6 +194,12 @@ class Verifier:
         self.verify_min_severity = verify_min_severity
 
     # ---------------------------------------------------------------- helpers
+    def _archive(self):
+        if getattr(self, "archive", None) is None:
+            from ..archive import Archive
+            self.archive = Archive(self.conn)
+        return self.archive
+
     def _cp(self, cp_id: str) -> sqlite3.Row:
         return self.conn.execute("SELECT * FROM counterparties WHERE id=?", (cp_id,)).fetchone()
 
@@ -208,12 +214,13 @@ class Verifier:
         return json.loads(a["highlights"] or "[]") if a else []
 
     def _add_source(self, event_id: int, url: str, domain: str, role: str,
-                    published: str | None, terms: list[str]) -> None:
+                    published: str | None, terms: list[str], basis: str = "live") -> None:
         short, full = self._article_text(url)
         quote = best_quote(full, short, terms, highlights=self._highlights(url))
         self.conn.execute(
-            "INSERT OR IGNORE INTO event_sources VALUES (?,?,?,?,?,?,?,?)",
-            (event_id, url, domain, publisher(domain), tier(domain), role, published, quote),
+            "INSERT OR IGNORE INTO event_sources (event_id, url, domain, publisher, tier, role, "
+            "published_at, quote, score_basis) VALUES (?,?,?,?,?,?,?,?,?)",
+            (event_id, url, domain, publisher(domain), tier(domain), role, published, quote, basis),
         )
 
     def _refresh(self, event_id: int, as_of: date) -> None:
@@ -314,7 +321,7 @@ class Verifier:
                 self.judge.annotate(decision, event_id, "kept separate")
             self.conn.execute("UPDATE signals SET event_id=? WHERE id=?", (event_id, s["id"]))
             self._add_source(event_id, s["url"], s["domain"], "scout", s["published_at"],
-                             json.loads(s["matched_terms"]))
+                             json.loads(s["matched_terms"]), s["score_basis"] or "live")
             touched.add(event_id)
         for eid in touched:
             self._refresh(eid, as_of)
@@ -355,7 +362,14 @@ class Verifier:
                 if not matches(text, aliases, context):
                     continue
                 domain = re.sub(r"^www\.", "", re.sub(r"^https?://([^/]+).*", r"\1", url))
-                _, tags, terms = score(text, domain)
+                basis = "live"
+                if mode == "replay":
+                    # Score on the page as it was on as_of, not today's snippets.
+                    _, tags, terms, basis, text = score_as_of(
+                        r.get("title") or "", r.get("description") or "", text, domain, url,
+                        as_of, self._archive())
+                else:
+                    _, tags, terms = score(text, domain)
                 kw_ok = ev["primary_tag"] in tags
                 if not kw_ok:
                     continue  # mentions the company but does not support this claim
@@ -381,7 +395,8 @@ class Verifier:
                     self.conn.execute("UPDATE articles SET highlights=? WHERE url=?",
                                       (json.dumps(hl), url))
                 before = self.conn.total_changes
-                self._add_source(ev["id"], url, domain, "corroboration", pub.isoformat(), terms)
+                self._add_source(ev["id"], url, domain, "corroboration", pub.isoformat(), terms,
+                                 basis)
                 n_new += self.conn.total_changes > before
             self._refresh(ev["id"], as_of)
             verdict = self.conn.execute("SELECT verdict FROM events WHERE id=?",

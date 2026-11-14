@@ -99,3 +99,16 @@ python scripts/verify.py reset   # clear events to re-run
   the later CCC downgrade). Publish dates are enforced, but snippet text can leak.
 - Paywalled pages (FT) can return navigation text in the quote.
 - Clustering is title/claim based (no LLM yet), so a few related stories stay separate events.
+
+## Replay integrity
+
+Replays enforce publish dates, but You.com returns pages as they look *today*, which can
+mention later events (e.g. Fitch's July First Brands page now links to its later downgrade).
+In replay mode, signals and corroboration hits are therefore scored on text that existed on
+the replay date: the last Internet Archive snapshot at/before that date (`youfin/archive.py`,
+cached in `archive_snapshots`, no API key) plus title + description. With no snapshot, only
+title + description are used; today's snippets/markdown/highlights are dropped. The Wayback
+lookup is made only for signals with severity >= 3 and for corroboration hits. The basis is
+stored in `signals.score_basis` / `event_sources.score_basis` (`snapshot` | `title_desc` |
+`live`). Re-score stored data with `python3 scripts/scout.py retag --as-of-replay`.
+Live mode is unchanged.

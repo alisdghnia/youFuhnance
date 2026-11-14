@@ -1,5 +1,5 @@
 
-=== first_brands: 6 events (level >= ALERT) ===
+=== first_brands: 5 events (level >= ALERT) ===
 first WATCH: 2025-09-02 T- 23d   first verified ALERT: 2025-09-02 T- 23d
 
 !! 2025-09-01 T- 24d [    high] diligence_red_flag confirmed (6 publishers, 6 articles, conf 0.90)
@@ -7,32 +7,27 @@ first WATCH: 2025-09-02 T- 23d   first verified ALERT: 2025-09-02 T- 23d
      ALERT raised as of 2025-09-02 T- 23d
        - [trade/wire/scout] workingcapitalforum.com (2025-09-01): "Receivables finance in the spotlight as First Brands Group reviews ... Explore the implications for receivables financing and private credit in our analysis of "
 
-!! 2025-09-12 T- 13d [    high] credit             confirmed (9 publishers, 16 articles, conf 0.90)
-     Apollo Has Short Position Against Debt of First Brands Group: FT
-     ALERT raised as of 2025-09-12 T- 13d
-       - [major press/scout] news.bloomberglaw.com (2025-09-12): "Apollo Has Short Position Against Debt of First Brands Group: FT Apollo Global Management has amassed a short position against the debt of First Brands Group, F"
-
-!! 2025-09-20 T-  5d [CRITICAL] operations         confirmed (3 publishers, 5 articles, conf 0.90)
+!! 2025-09-20 T-  5d [    high] operations         confirmed (4 publishers, 6 articles, conf 0.90)
      Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge
      ALERT raised as of 2025-09-20 T-  5d
-       ~ LLM same_event -> no [kept separate] Newsminimalist: Different focus on debt and financing issues
        - [major press/scout] news.bloomberglaw.com (2025-09-20): "Creditors to After watching in horror, and staying up all night in some cases, investors are taking steps to organize in the event of a restructuring, according"
 
-!! 2025-09-22 T-  3d [CRITICAL] insolvency         confirmed (6 publishers, 16 articles, conf 0.90)
+!! 2025-09-20 T-  5d [    high] diligence_red_flag confirmed (2 publishers, 2 articles, conf 0.90)
+     First Brands’ Refi on Pause Over Skepticism of Finances, Will ...
+     ALERT raised as of 2025-09-22 T-  3d
+       ~ LLM same_event -> no [kept separate] Newsminimalist: Different focus on debt and financing issues
+       - [major press/scout] octus.com (2025-09-22): "Article First Brands’ Refi on Pause Over Skepticism of Finances, Will Commission Quality of Earnings Report First Brands’ over $6 billion dollar-equivalent refi"
+
+!! 2025-09-22 T-  3d [CRITICAL] insolvency         confirmed (5 publishers, 15 articles, conf 0.90)
      First Brands Mulls Restructuring Options Including Bankruptcy
      ALERT raised as of 2025-09-22 T-  3d
        - [major press/scout] news.bloomberglaw.com (2025-09-22): "The company’s advisers are sounding out lenders for new financing, which could be structured as a so-called debtor-in-possession loan to fund continuing operati"
 
-!! 2025-09-22 T-  3d [    high] diligence_red_flag confirmed (2 publishers, 2 articles, conf 0.90)
-     First Brands’ Refi on Pause Over Skepticism of Finances, Will ...
-     ALERT raised as of 2025-09-22 T-  3d
-       ~ LLM same_event -> no [kept separate] First Brands’ Refi on Pause Over Skepticism of Finances, Wil: Different development, refinancing paused due to skepticism over finances
-       - [major press/scout] octus.com (2025-09-22): "Article First Brands’ Refi on Pause Over Skepticism of Finances, Will Commission Quality of Earnings Report First Brands’ over $6 billion dollar-equivalent refi"
-
-!! 2025-09-25 T-  0d [CRITICAL] insolvency         confirmed (11 publishers, 12 articles, conf 0.90)
+!! 2025-09-25 T-  0d [CRITICAL] insolvency         confirmed (9 publishers, 10 articles, conf 0.90)
      First Brands factoring agreements a USD 2bn variable at play in ...
      ALERT raised as of 2025-09-25 T-  0d
-       - [major press/scout] ionanalytics.com (2025-09-25): "First Brands factoring agreements a USD 2bn variable at play in potential Chapter 11 filing – Legal Analysis First Brands, an Ohio-based auto parts company, is "
+       ~ LLM same_event -> no [kept separate] Auto parts maker First Brands Group to file for bankruptcy |: The new article reports a bankruptcy filing, which is a different development from the existing event's review of the company's financing quality.
+       - [major press/scout] ionanalytics.com (2025-09-25): "Concerns have been raised over the company’s off-balance sheet financing, which reportedly includes USD 2bn in invoice-factoring facilities, which could become "
 
 === tricolor: 4 events (level >= ALERT) ===
 first WATCH: 2025-09-07 T-  3d   first verified ALERT: 2025-09-07 T-  3d
@@ -42,16 +37,14 @@ first WATCH: 2025-09-07 T-  3d   first verified ALERT: 2025-09-07 T-  3d
      ALERT raised as of 2025-09-07 T-  3d
        - [primary/scout] sec.gov (2025-09-07): "The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor, which are primarily secured by notes receivable."
 
-!! 2025-09-09 T-  1d [CRITICAL] insolvency         confirmed (16 publishers, 30 articles, conf 0.90)
+!! 2025-09-09 T-  1d [CRITICAL] insolvency         confirmed (15 publishers, 29 articles, conf 0.90)
      After Fifth Third takes credit hit, borrower goes bankrupt | American ...
      ALERT raised as of 2025-09-09 T-  1d
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/exclusive-tricolor-auto-is-: The article directly states that Tricolor Auto is filing for bankruptcy, citing sources.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.sec.gov/Archives/edgar/data/1516912/000151691225: The article reports that Tricolor filed for Chapter 7 bankruptcy on September 10, 2025.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.threads.com/@cardealershipguy/post/DOYiw9uDc8u/t: The article explicitly states that Tricolor Auto Group is expected to file for bankruptcy.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/exclusive-tricolor-auto-is-: The article directly states that Tricolor Auto is filing for bankruptcy.
        ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.autofinancenews.net/allposts/risk-management/tri: The article states that Tricolor Auto is preparing to file for bankruptcy.
-       - [primary/corroboration] sec.gov (2025-09-07): "The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor, which are primarily secured by notes receivable."
+       - [primary/scout] inforuptcy.com (2025-09-10): "Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas Northern Bankruptcy Court"
 
-!! 2025-09-09 T-  1d [CRITICAL] operations         confirmed (4 publishers, 5 articles, conf 0.90)
+!! 2025-09-09 T-  1d [CRITICAL] operations         confirmed (3 publishers, 4 articles, conf 0.90)
      Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
      ALERT raised as of 2025-09-09 T-  1d
        ~ LLM same_event -> no [kept separate] Tricolor Auto said to furlough employees, shutter operations: Different development (furloughing employees) than the existing event (filing for bankruptcy)
