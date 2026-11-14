@@ -26,8 +26,11 @@ DISCLAIMER = "Analysis for the deal team — not investment or legal advice."
 LEVEL_RANK = {"log": 0, "watch": 1, "ALERT": 2}
 
 
+EXTEND = {"first_brands": "2025-10-15"}   # slider runs past the 09-25 filing marker (basket stress crossing, JEF close)
+
+
 def cp_range(cp):
-    return LIVE.get(cp, (START, END))
+    return LIVE.get(cp, (START, EXTEND.get(cp, END)))
 
 
 def open_db(path=None) -> sqlite3.Connection:
@@ -157,6 +160,8 @@ def feed_at(conn, cp, d):
         except ValueError:
             continue
         if p.get("as_of") != d or (r["topic"] != "brief" and p.get("counterparty") != cp):
+            continue
+        if r["sender"] == "summarizer" and p.get("counterparty") != cp:
             continue
         if r["topic"] == "signals":
             nsig += 1
@@ -502,11 +507,14 @@ def summary_at(conn, cp, name, d, evs, ms, team, exp_total, npos):
     pt = team["prompts"][0]["text"] if team and team.get("prompts") else "no open question"
     sent = [x for x in re.split(r"(?<=[.?!])\s+", pt) if x]
     prompt = _clip(sent[-1] if sent else pt, 170)
-    return {"headline": head, "news": news, "verifier": ver, "market": mk, "covenant": _cov_line(conn, cp, d), "team": prompt}
+    rule = {"headline": head, "news": news, "verifier": ver, "market": mk, "covenant": _cov_line(conn, cp, d), "team": prompt}
+    from youfin.agents.summarizer import apply_to_rule_summary   # LLM text only if it passed the fact guard
+    return apply_to_rule_summary(conn, cp, d, rule)
 
 
 def render_summary(s):
-    return [f"**Executive summary: {s['headline']}**", f"- News: {s['news']}", f"- Verifier: {s['verifier']}",
+    lab = [f"_LLM · grounded in {s['llm']} board messages_"] if s.get("llm") else []
+    return lab + [f"**Executive summary: {s['headline']}**", f"- News: {s['news']}", f"- Verifier: {s['verifier']}",
             f"- Market: {s['market']}", f"- Covenant: {s['covenant']}", f"- Team: {s['team']}", ""]
 
 

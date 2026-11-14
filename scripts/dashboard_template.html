@@ -272,7 +272,7 @@ function pinTip(e) {
 function execSummary(day, d) {
   const S = day.summary, L = [['News', S.news], ['Verifier', S.verifier], ['Market', S.market], ['Covenant', S.covenant], ['Team', S.team]];
   $('exec').innerHTML = `<h2 class="sec">Executive summary — ${esc(fmtD(d))}</h2><div style="font-weight:700;font-size:16px;margin:4px 0 8px">${esc(S.headline)}</div>` +
-    L.map(x => `<div style="font-size:13px;margin:3px 0"><b>${x[0]}:</b> ${esc(x[1])}</div>`).join('') + '<div class="cav" style="margin-top:6px">Rule-based from the as-of data below, no LLM. Analysis, not advice.</div>';
+    L.map(x => `<div style="font-size:13px;margin:3px 0"><b>${x[0]}:</b> ${esc(x[1])}</div>`).join('') + `<div class="cav" style="margin-top:6px">${S.llm ? `LLM · grounded in ${S.llm} board messages; every fact checked against them. ` : 'Rule-based from the as-of data below, no LLM. '}Analysis, not advice.</div>`;
 }
 function teamPanel(day) {
   const T = day.team;

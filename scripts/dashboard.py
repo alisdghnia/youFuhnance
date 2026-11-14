@@ -22,7 +22,7 @@ def build(conn, cps=None, last=None, marks=True) -> dict:
             continue
         live = cp in X.LIVE
         a, b = X.cp_range(cp)
-        dates = list(X.daterange(a, min(last or b, b))) if live else dates0
+        dates = list(X.daterange(a, min(last or b, b))) if live or b != X.END else dates0
         ps, tot = X.exposure(conn, cp)
         ms = X.market_series(conn, cp) if data["market"] else None
         days, pins, seen = {}, [], set()
@@ -51,7 +51,7 @@ def build(conn, cps=None, last=None, marks=True) -> dict:
                        "brief": X.render_cp(conn, cp, c["name"], d)}
             prev_acts = acts
         data["cps"][cp] = {"name": c["name"], "role": c["role"], "sector": c["sector"], "positions": ps,
-                           "exposure": tot, "marks": X.study_marks(conn, cp) if marks and not live else None, "live": live, "dates": dates if live else None, "days": days,
+                           "exposure": tot, "marks": X.study_marks(conn, cp) if marks and not live else None, "live": live, "dates": dates if dates != dates0 else None, "days": days,
                            "ms": ms, "pins": pins}
         print(f"built {cp}", flush=True)
     return data
