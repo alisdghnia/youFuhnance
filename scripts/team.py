@@ -1,5 +1,6 @@
-"""Run Scout + Verifier + Market desk as a team that talks over the bus (optionally mirrored to
-OpenCrawl). Verifier `alerts` trigger the Market desk, which publishes on `actions`.
+"""Run Scout + Verifier + Market desk + Covenant desk as a team that talks over the bus (optionally
+mirrored to OpenCrawl). Verifier `alerts` trigger the Market and Covenant desks, which publish on
+`actions`; the Covenant desk also re-checks positions when later `events` change the evidence.
 
   YOUFIN_BUS=local  python scripts/team.py replay --start 2025-08-25 --end 2025-09-25 --from-db
   YOUFIN_BUS=mirror python scripts/team.py replay --start 2025-09-05 --end 2025-09-10 \\
@@ -10,6 +11,7 @@ OpenCrawl). Verifier `alerts` trigger the Market desk, which publishes on `actio
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -36,6 +38,23 @@ def make_market_desk(conn, bus):
         return None
 
 
+def make_covenant_desk(conn, bus):
+    """The covenant desk is optional too: any start-up failure leaves the rest of the team running.
+    YOUFIN_COVENANT_LLM=1 lets the local LLM draft wording (statuses stay rule-based)."""
+    try:
+        from youfin.agents.covenant import CovenantDesk
+        judge = None
+        if os.environ.get("YOUFIN_COVENANT_LLM") == "1":
+            from youfin.llm import Judge
+            judge = Judge(conn)
+        desk = CovenantDesk(conn, bus=bus, judge=judge)  # subscribes to `alerts` + `events`
+        desk.reset()                                      # fresh covenant_assessments for this replay
+        return desk
+    except Exception as e:
+        print(f"[team] covenant desk disabled: {type(e).__name__}: {e}")
+        return None
+
+
 def replay(args, conn) -> None:
     bus = Bus(conn)
     bus.clear()
@@ -43,6 +62,7 @@ def replay(args, conn) -> None:
     scout = Scout(conn, bus=bus)
     verifier = Verifier(conn, bus=bus)   # subscribes to `signals`
     market = make_market_desk(conn, bus)
+    covenant = make_covenant_desk(conn, bus)
     print(f"bus backend: {'mirror' if bus.mirror else 'local'}")
     days = [args.start + timedelta(n) for n in range((args.end - args.start).days + 1)]
     for i, d in enumerate(days):
@@ -54,6 +74,8 @@ def replay(args, conn) -> None:
         verifier.step(d, "replay")
         if market is not None:
             market.step(d)               # never raises: failed alerts land in market.errors
+        if covenant is not None:
+            covenant.step(d)             # never raises: failures land in covenant.errors
         msgs = bus.transcript[mark:]
         if not msgs:
             continue
@@ -70,8 +92,11 @@ def replay(args, conn) -> None:
                 print(f"  {m['sender']:<8} -> {m['topic']:<7}: {m['payload'].get('summary', '')[:110]}")
     print_alerts(conn, cps, args.start, args.end)
     print_actions(bus)
+    print_covenant(bus)
     for e in (market.errors if market is not None else []):
         print(f"  market desk could not assess {e}")
+    for e in (covenant.errors if covenant is not None else []):
+        print(f"  covenant desk could not assess {e}")
     client = getattr(verifier, "client", None)
     if client is not None:  # the Verifier's corroboration searches are billed even with --from-db
         print(f"\nYou.com usage (verifier): {client.calls} (~${client.calls['search'] * 0.005:.2f})")
@@ -89,13 +114,25 @@ def print_alerts(conn, cps, start, end) -> None:
 
 
 def print_actions(bus) -> None:
-    acts = [m for m in bus.transcript if m["topic"] == "actions"]
+    acts = [m for m in bus.transcript if m["topic"] == "actions" and m["sender"] == "market"]
     print(f"\nmarket desk actions: {len(acts)}")
     for m in acts:
         p = m["payload"]
         hedges = ", ".join(f"{h['ticker']}({h['score']:.2f})" for h in p["hedge_candidates"])
         print(f"  {p['counterparty']} event {p['event_id']} as of {p['as_of']} (close {p['bar_date']}): "
               f"window {p['window']}, basket P(stress) {p['basket_p_stress']}, hedges {hedges}")
+
+
+def print_covenant(bus) -> None:
+    acts = [m for m in bus.transcript if m["topic"] == "actions" and m["sender"] == "covenant"]
+    print(f"\ncovenant desk actions: {len(acts)} (considerations for the deal team and counsel, not legal advice)")
+    for m in acts:
+        p = m["payload"]
+        lk = ", ".join(t["id"] for t in p["likely_tripped"]) or "none"
+        first = "; ".join(f"#{c['n']} {c['id']}({c['urgency']})" for c in p["checklist"][:3]) or "monitor"
+        why = f" alerts {p['alert_event_ids']}" if p["alert_event_ids"] else " evidence change"
+        print(f"  {p['position']} {p['as_of']}{why}: stage {p['stage']} {p['stage_label']}; likely {lk}; "
+              f"possible {len(p['possible'])}; first {first}")
 
 
 def status(conn) -> None:

@@ -30,6 +30,7 @@ AGENT_TASKS = {
     "scout": "YouFin Scout: sweeps the web for credit-risk news on portfolio counterparties",
     "verifier": "YouFin Verifier: clusters signals into events, corroborates them, raises alerts",
     "market": "YouFin Market desk: checks whether public proxies already price an alert",
+    "covenant": "YouFin Covenant desk: maps verified alerts to contract triggers and lender actions",
 }
 
 SCHEMA = """

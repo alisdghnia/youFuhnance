@@ -183,3 +183,69 @@ that the stored drivers make visible; the lead counts an alert on a trading day 
 (a break the same day is lead 0), so it is not flattered by intraday timing; the "stress" regime is the
 high-variance one and in these fits is short-lived (fat-tail days rather than a persistent state); a proxy with
 no bars is shown as `n/a` with a data warning and is left out of the window and the hedge ranking.
+
+## Covenant & Collateral Rights desk
+
+For a lender the most valuable lever is to use its contract rights **before** a bankruptcy
+petition: from the filing on, the automatic stay (11 U.S.C. 362) stops self-help. The covenant desk
+(`youfin/agents/covenant.py`, bus agent `covenant`, its own tables `covenant_assessments` +
+`covenant_trigger_status`) turns verified alerts into a trigger table and an ordered action checklist
+per exposed position. **Considerations for the deal team and counsel, not legal advice.**
+
+1. **Mock terms** (`terms` per position in `data/portfolio.json`, all HYPOTHETICAL): borrowing base /
+   purchase terms, reporting covenants, review events, events of default / termination events,
+   cross-default, MAC, servicer termination events + backup servicer, springing cash dominion
+   (lockbox / DACA), custody (title custodian, UCC filings, invoice verification, account-debtor
+   notification). The ABS Class B position has realistic limited rights: it acts only through the
+   trustee, and the Controlling Class (Class A) directs servicer removal.
+2. **Deterministic status rules** (each trigger lists `direct` / `indirect` risk tags from `risk_tags.py`):
+
+   | status | rule |
+   |---|---|
+   | `likely_tripped` | a direct tag on a `confirmed`/`corroborated` event (+ a text rule where set: the insolvency triggers need a *filed* petition, e.g. "files for Chapter 7" or a docket number; "preparing to file" is not enough) |
+   | `possible` | a direct tag on a weaker watch-level event, a direct tag without the required text, or an indirect tag |
+   | `not_indicated` | no evidence; triggers marked `observable: false` (payment, BBC delivery, loss ratios) can never be more than `possible` from news |
+
+   MAC is capped at `possible` (contestable); springing cash dominion is derived from the EoD/STE statuses;
+   log-level events never count. Every status keeps its receipt: event, verdict, the source that best
+   matches that trigger, quote and URL.
+3. **Strict as-of:** events are rebuilt from signals first seen and sources published/found on or before
+   the date, the verdict is re-judged on those sources, and an event never counts above the level the
+   Verifier had raised by then (no later headlines either).
+4. **Escalation:** stage 0 monitor, 1 watch, 2 verified alert, 3 pre-filing (a severe trigger likely
+   tripped, or a confirmed bankruptcy *preparation*), 4 filed (automatic stay). Each playbook item
+   (`warehouse`, `abs_notes`, `receivables_purchase`) has an urgency per stage (within hours / 24h / this
+   week); at stage 4 pre-petition self-help is replaced by post-petition items (stay compliance, cash
+   collateral, stay relief, proof of claim, preference review).
+5. **LLM:** optional (`--llm`, or `YOUFIN_COVENANT_LLM=1` in the team replay). The local model only drafts
+   one sentence from the finished result; nothing it says is read back, and a draft naming an unflagged
+   trigger is dropped.
+6. **Bus:** every ALERT publishes one `actions` message per exposed position (`action-covenant-<pos>-<date>`,
+   idempotent); later `events` changes publish only when a status, the stage or an urgency changes.
+
+```bash
+python3 scripts/covenant.py assess --position abf-001 --as-of 2025-09-07     # [--llm] [--save] [--json]
+python3 scripts/covenant.py timeline --position abf-001 --start 2025-08-25 --end 2025-09-12 --event 2025-09-10
+python3 scripts/covenant.py timeline --position abf-003 --start 2025-08-25 --end 2025-09-26 --event 2025-09-25
+python3 scripts/covenant.py terms --position abf-002
+```
+
+**Result** (team replay 2025-08-25..09-25, `--from-db`, 12 Verifier searches):
+
+| Date | Lead | Position | Stage | What changed | First actions |
+|---|---|---|---|---|---|
+| 09-06 | T-4 | abf-001 warehouse | 1 watch | bank-seizure / furlough reports (aggregators only): 11 triggers `possible` | draw stop, reservation of rights, interim BBC + tape (24h) |
+| 09-07 | T-3 | abf-001 | 2 verified alert | Origin Bank 8-K: other-creditor review event `likely_tripped` | the same, now within hours; titles with custodian (hours); UCC search, cash dominion prep, backup servicer, counsel (24h) |
+| 09-09 | T-1 | abf-001 | 3 pre-filing | cessation of business, cross-default, servicer stops servicing `likely_tripped`; bankruptcy prepared (`possible`) | notice of default, cash dominion, servicer termination, counsel: within hours |
+| 09-10 | T+0 | abf-001 | 4 filed | insolvency (docket no.) and fraud / double-pledge (DOJ probe) `likely_tripped` | stop self-help, custodian hold, cash collateral |
+| 09-06..10 | | abf-002 ABS B | 1 -> 3 -> 4 | no hook on the 8-K for a Class B holder; servicer stops servicing on 09-09 | contact trustee, STE thresholds, backup servicer, exit-liquidity hand-off |
+| 09-02 | T-23 | abf-003 receivables | 2 verified alert | FT/Deloitte review: review event `likely_tripped`; double-factoring `possible` | stop purchases, verify invoices with account debtors, schedule of all financings (hours) |
+| 09-20 | T-5 | abf-003 | 3 pre-filing | "goes quiet": servicer default `likely_tripped`, cash dominion springs | redirect collections, servicer replacement, counsel: within hours |
+| 09-25 | T+0 | abf-003 | 4 filed | "files Chapter 11" (financing units) | stop self-help, assert ownership of invoices |
+
+Caveats: the terms are invented and the tag-to-trigger mapping is coarse (the `operations` tag fires on
+layoffs and on a company "going quiet"); a status means public news indicates the condition, not that a
+default exists legally (notices, cure periods and materiality are for counsel); filing detection is a regex
+on titles/quotes, and the First Brands 09-25 hits are affiliate / financing-unit filings; corroboration
+sources are dated by the verification run that found them (an approximation); pages are scored as they
+look today (see Replay integrity).
