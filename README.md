@@ -44,3 +44,22 @@ python scripts/scout.py timeline --counterparty tricolor --event 2025-09-10 --mi
 | 2025-09-10 | T-0 | Chapter 7; Fifth Third discloses a $200M fraud |
 
 Cost of a full replay: 124 searches plus 45 pages fetched, about $0.67.
+
+## First Brands replay result (see `data/replay_first_brands.log`)
+| Date | Lead | Signal |
+|---|---|---|
+| **2025-09-01** | **T-24d** | FT: Jefferies among private credit investors exposed; Deloitte appointed to review invoice factoring. **First `high` alert** (`diligence_red_flag`) |
+| 2025-09-03 | T-22d | Deloitte quality-of-earnings review confirmed by multiple outlets (EN/DE) |
+| 2025-09-12 | T-13d | Apollo short position reported; loans slump |
+| 2025-09-18 to 09-20 | T-7 to T-5d | Creditors hire advisers; company "goes quiet"; **CRITICAL** |
+| 2025-09-22 | T-3d | WSJ/Bloomberg: preparing a possible bankruptcy filing |
+| 2025-09-25 | T-0 | Chapter 11 |
+
+Cost: 99 searches plus 36 pages, about $0.53.
+
+```bash
+python scripts/scout.py replay --counterparty first_brands --start 2025-07-01 --end 2025-09-25 \
+    --step 7 --daily-from 2025-09-01 --event 2025-09-25 --fetch 4 --min-severity 2
+# After changing rules in youfin/risk_tags.py, re-score stored hits without new API calls:
+python scripts/scout.py retag
+```

@@ -50,7 +50,7 @@ def print_timeline(conn, cp_id: str, event: date | None, min_sev: int) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["live", "replay", "timeline"])
+    ap.add_argument("mode", choices=["live", "replay", "timeline", "retag"])
     ap.add_argument("--counterparty", action="append")
     ap.add_argument("--lookback", type=int, default=7)
     ap.add_argument("--start", type=date.fromisoformat)
@@ -67,7 +67,11 @@ def main() -> None:
     load_portfolio(conn, json.loads(PORTFOLIO_PATH.read_text()))
     cps = args.counterparty or [r["id"] for r in conn.execute("SELECT id FROM counterparties")]
 
-    if args.mode != "timeline":
+    if args.mode == "retag":
+        n = Scout(conn, client=object()).retag()  # no API client needed
+        print(f"re-scored {n} stored signals")
+        return
+    elif args.mode != "timeline":
         client = YouClient()
         scout = Scout(conn, client)
         if args.mode == "live":

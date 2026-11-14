@@ -46,6 +46,15 @@ class NewSignal:
     matched_terms: list[str]
 
 
+def score(text: str, domain: str) -> tuple[int, list[str], list[str]]:
+    severity, tags, terms = tag(text)
+    if domain.endswith("sec.gov"):
+        # A regulatory filing that names our counterparty is never just 'info'.
+        tags.append("sec_filing")
+        severity = max(severity, 3)
+    return severity, tags, terms
+
+
 def _pub_date(page_age: str | None) -> date | None:
     if not page_age:
         return None
@@ -125,11 +134,7 @@ class Scout:
             "VALUES (?,?,?,?,?,?)",
             (url, title, r.get("description"), json.dumps(snippets), r.get("page_age"), domain),
         )
-        severity, tags, terms = tag(text)
-        if domain.endswith("sec.gov"):
-            # A regulatory filing that names our counterparty is never just 'info'.
-            tags.append("sec_filing")
-            severity = max(severity, 3)
+        severity, tags, terms = score(text, domain)
         cur = self.conn.execute(
             "INSERT OR IGNORE INTO signals (counterparty_id, url, published_at, first_seen_as_of, "
             "run_id, severity, tags, matched_terms) VALUES (?,?,?,?,?,?,?,?)",
@@ -140,6 +145,23 @@ class Scout:
             return None  # already seen in an earlier sweep
         return NewSignal(cp_id, url, title, domain, pub.isoformat() if pub else None,
                          severity, tags, terms)
+
+    def retag(self) -> int:
+        """Re-score stored signals with the current rules (no API calls)."""
+        rows = self.conn.execute(
+            "SELECT s.id, a.title, a.description, a.snippets, a.domain "
+            "FROM signals s JOIN articles a USING (url)"
+        ).fetchall()
+        for r in rows:
+            text = " ".join([r["title"] or "", r["description"] or "",
+                             *json.loads(r["snippets"] or "[]")])
+            severity, tags, terms = score(text, r["domain"] or "")
+            self.conn.execute(
+                "UPDATE signals SET severity=?, tags=?, matched_terms=? WHERE id=?",
+                (severity, json.dumps(tags), json.dumps(terms), r["id"]),
+            )
+        self.conn.commit()
+        return len(rows)
 
     def _fetch_full_text(self, signals: list[NewSignal]) -> None:
         urls = sorted({s.url for s in signals})
