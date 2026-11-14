@@ -11,7 +11,8 @@ its source. Built for the *Ground Truth* hackathon on the You.com API.
 - [x] **Scout agent**: You.com Search sweeps per counterparty, with a no-look-ahead replay mode
 - [x] SQLite store (`data/youfin.db`): counterparties, positions, runs, articles, signals
 - [x] Deterministic risk tagger; each tag stores the terms that triggered it
-- [ ] Verifier (corroboration) · Sector/Ratings · Contagion mapper · Morning brief
+- [x] **Verifier agent**: merges syndicated copies into events, rates sources by tier, corroborates via You.com, quotes a receipt for every source
+- [ ] Sector/Ratings · Contagion mapper · Morning brief
 - [ ] OpenCrawl board as the inter-agent bus
 
 ## Setup
@@ -63,3 +64,38 @@ python scripts/scout.py replay --counterparty first_brands --start 2025-07-01 --
 # After changing rules in youfin/risk_tags.py, re-score stored hits without new API calls:
 python scripts/scout.py retag
 ```
+
+## Verifier agent
+Runs day by day over Scout signals (severity 3 and above):
+1. **Cluster:** syndicated copies of one story become one *event* (same claim within 2 days, or similar titles).
+2. **Verify:** for unconfirmed high/critical events, a You.com corroboration search limited to articles
+   published *up to that day*. Hits count only if they support the same claim.
+3. **Judge:** source tiers (`youfin/sources.py`), counting syndicated outlets once:
+   tier 0 primary (SEC, courts, rating agencies) · tier 1 major press · tier 2 trade/wire · tier 3 aggregator/social.
+
+| Verdict | Rule | Alert (severity >= 4) |
+|---|---|---|
+| `confirmed` | any tier 0/1 source | **ALERT** |
+| `corroborated` | 2+ independent tier 2 sources | **ALERT** |
+| `weakly_corroborated` | 2+ sources, including aggregators/social | watch |
+| `single_source` | one publisher | watch |
+
+```bash
+python scripts/verify.py replay --start 2025-07-01 --end 2025-09-25 \
+    --event tricolor=2025-09-10 --event first_brands=2025-09-25
+python scripts/verify.py report --min-level ALERT --event tricolor=2025-09-10 --event first_brands=2025-09-25
+python scripts/verify.py reset   # clear events to re-run
+```
+
+**Result** (`data/verify_alerts.txt`, 20 corroboration searches, about $0.10):
+- **Tricolor:** the Sep 6 "bank seizes Tricolor" story stays **watch** (only aggregator sources).
+  The first **verified ALERT is Sep 7 (T-3d)**: Origin Bank's SEC 8-K, *"total loan commitments to
+  Tricolor of approximately $30.1 million"*.
+- **First Brands:** the first **verified ALERT is Sep 2 (T-23d)**: FT, Jefferies exposed to First Brands invoices
+  (6 publishers). Next is Sep 12 (T-13d), the Apollo short (9 publishers).
+
+**Known limitations**
+- Replays use pages as they look *today*: a snippet can contain later links (e.g. Fitch's July page lists
+  the later CCC downgrade). Publish dates are enforced, but snippet text can leak.
+- Paywalled pages (FT) can return navigation text in the quote.
+- Clustering is title/claim based (no LLM yet), so a few related stories stay separate events.
