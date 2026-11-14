@@ -3,38 +3,37 @@
 [2025-09-02] clustered  2 signals | verified: -
       !! ALERT first_brands: Jefferies among private credit investors exposed to US auto company ...
 [2025-09-03] clustered  4 signals | verified: -
-[2025-09-06] clustered  3 signals | verified: #45:single_source(+0), #46:weakly_corroborated(+0)
-[2025-09-07] clustered  1 signals | verified: #45:single_source(+0), #46:weakly_corroborated(+0)
+[2025-09-06] clustered  3 signals | verified: #65:weakly_corroborated(+0), #66:weakly_corroborated(+1)
+[2025-09-07] clustered  1 signals | verified: #65:weakly_corroborated(+0), #66:weakly_corroborated(+0)
       !! ALERT tricolor: [sec.gov] The Bank currently has total loan commitments to Tricolor of approximately $30.1
-[2025-09-08] clustered  2 signals | verified: #45:weakly_corroborated(+1), #46:weakly_corroborated(+0)
-[2025-09-09] clustered  7 signals | verified: #48:confirmed(+1), #50:single_source(+0)
+[2025-09-08] clustered  2 signals | verified: #65:weakly_corroborated(+1), #66:weakly_corroborated(+2)
+[2025-09-09] clustered  7 signals | verified: #68:confirmed(+1)
       !! ALERT tricolor: Exclusive: Tricolor Auto is filing for bankruptcy, sources say
       !! ALERT tricolor: Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
-[2025-09-10] clustered 32 signals | verified: #50:single_source(+0)
+[2025-09-10] clustered 32 signals | verified: -
       !! ALERT tricolor: US Department of Justice Probing Tricolor: FT
-[2025-09-11] clustered  0 signals | verified: #50:single_source(+0)
-[2025-09-12] clustered 17 signals | verified: #53:single_source(+0)
+[2025-09-12] clustered 17 signals | verified: #72:confirmed(+7)
       !! ALERT first_brands: Apollo Has Short Position Against Debt of First Brands Group: FT
-[2025-09-13] clustered  0 signals | verified: #53:single_source(+0)
-[2025-09-14] clustered  0 signals | verified: #53:single_source(+0)
-[2025-09-18] clustered  1 signals | verified: #54:single_source(+0)
-[2025-09-19] clustered  5 signals | verified: #54:confirmed(+2)
+      !! ALERT first_brands: First Brands Loan Slumps After Report on Apollo Short Position
+[2025-09-18] clustered  1 signals | verified: #73:single_source(+0)
+[2025-09-19] clustered  5 signals | verified: #73:confirmed(+4)
       !! ALERT first_brands: AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options
-[2025-09-20] clustered  6 signals | verified: #57:single_source(+0), #58:confirmed(+5)
+[2025-09-20] clustered  6 signals | verified: #76:weakly_corroborated(+0)
       !! ALERT first_brands: Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge
-      !! ALERT first_brands: Apollo, Diameter Closed Shorts on Auto-Parts Firm First Brands
-[2025-09-21] clustered  1 signals | verified: #57:single_source(+0)
-[2025-09-22] clustered 13 signals | verified: #57:single_source(+0)
+[2025-09-21] clustered  1 signals | verified: #76:weakly_corroborated(+0)
+[2025-09-22] clustered 13 signals | verified: #76:confirmed(+2)
+      !! ALERT first_brands: First Brands Mulls Restructuring Options Including Bankruptcy - ...
       !! ALERT first_brands: First Brands Mulls Restructuring Options Including Bankruptcy
-[2025-09-23] clustered  5 signals | verified: #60:confirmed(+8)
-      !! ALERT first_brands: First Brands $2 Billion Loan Rebounds 3 Cents After Selloff
+      !! ALERT first_brands: First Brands’ Refi on Pause Over Skepticism of Finances, Will ...
+[2025-09-23] clustered  5 signals | verified: -
 [2025-09-24] clustered  1 signals | verified: -
 [2025-09-25] clustered 12 signals | verified: -
       !! ALERT first_brands: First Brands factoring agreements a USD 2bn variable at play in ...
+LLM (llama3.1:8b): 56 live calls, avg 1.9s, 26 cache hits, available=True
 
-API usage: {'search': 20, 'contents_pages': 0} (~$0.10)
+API usage: {'search': 13, 'contents_pages': 0} (~$0.07)
 
-=== first_brands: 12 events (level >= watch) ===
+=== first_brands: 11 events (level >= watch) ===
 first WATCH: 2025-07-22 T- 65d   first verified ALERT: 2025-09-02 T- 23d
 
 ?  2025-07-22 T- 65d [elevated] credit             confirmed (1 publishers, 1 articles, conf 0.90)
@@ -45,75 +44,133 @@ first WATCH: 2025-07-22 T- 65d   first verified ALERT: 2025-09-02 T- 23d
      Jefferies among private credit investors exposed to US auto company ...
      ALERT raised as of 2025-09-02 T- 23d
        - [major press/scout] ft.com (2025-09-01): "Accessibility help Skip to navigation Skip to main content Skip to footer > Jefferies among private credit investors exposed to US auto company invoices Registe"
-       - [trade/wire/scout] workingcapitalforum.com (2025-09-01): "Skip to content Receivables finance in the spotlight as First Brands Group reviews earnings September 1, 2025 Facebook X Email LinkedIn Registered Reader Member"
 
 !! 2025-09-12 T- 13d [    high] credit             confirmed (9 publishers, 16 articles, conf 0.90)
      Apollo Has Short Position Against Debt of First Brands Group: FT
      ALERT raised as of 2025-09-12 T- 13d
        - [major press/scout] news.bloomberglaw.com (2025-09-12): "Apollo Has Short Position Against Debt of First Brands Group: FT Apollo Global Management has amassed a short position against the debt of First Brands Group, F"
-       - [major press/scout] news.bloomberglaw.com (2025-09-12): "First Brands Loan Slumps After Report on Apollo Short Position A roughly $2 billion leveraged loan for First Brands Group tumbled after a news report about Apol"
 
-?  2025-09-12 T- 13d [    high] lender_disclosure  single_source (1 publishers, 1 articles, conf 0.20)
-     Apollo Global's High-Stakes Bet on First Brands Group: Credit Risk ...
-       - [aggregator/social/scout] ainvest.com (2025-09-12): "In a move that underscores the growing volatility in leveraged credit markets, ApolloAPO+1.75% Global Management has taken a short position against the debt of "
+!! 2025-09-12 T- 13d [    high] lender_disclosure  confirmed (6 publishers, 8 articles, conf 0.90)
+     First Brands Loan Slumps After Report on Apollo Short Position
+     ALERT raised as of 2025-09-12 T- 13d
+       ~ LLM same_event -> no [kept separate] Apollo Global's High-Stakes Bet on First Brands Group: Credi: Different focus on Apollo's risk tolerance and credit strategy
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.bloomberg.com/news/articles/2025-09-12/first-bra: The article reports on Apollo Global's short position on First Brands Group's debt.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.ainvest.com/news/apollo-global-high-stakes-bet-b: The article reports Apollo Global's short position against First Brands Group's debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://stockinvest.us/digest/apollos-year-long-cds-short-on: The article reports Apollo Global's bet on First Brands Group's debt through a credit default swap.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://news.bloomberglaw.com/bankruptcy-law/first-brands-lo: The article reports on Apollo Global's credit default swap position that will pay off if First Brands fails to pay its debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.investing.com/news/stock-market-news/first-brand: The article reports that Apollo Global Management has built a short position against First Brands Group's debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.indiapodcast.com/apollo-first-brands-debt/: The article reports that Apollo Global Management has taken a short position against First Brands Group's debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.ainvest.com/news/apollo-takes-short-position-bra: The article reports Apollo Global's short position against First Brands Group debt, indicating a potential negative outlook on the company's creditworthiness.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ft.com/content/fe1fd1ff-8a7b-4958-b123-cf9fc93c6: The article mentions Apollo, but only in the context of 'bet against debt', not as lenders or funds disclosing exposure to the company's debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://biztoc.com/x/834114302e02dde1: The article reports on a loan slumping after a report on Apollo's short position, implying lenders or funds are disclosing exposure to First Brands' debt.
+       - [major press/corroboration] news.bloomberglaw.com (2025-09-12): "First Brands Loan Slumps After Report on Apollo Short Position A roughly $2 billion leveraged loan for First Brands Group tumbled after a news report about Apol"
 
-!! 2025-09-18 T-  7d [CRITICAL] insolvency         confirmed (2 publishers, 3 articles, conf 0.90)
+!! 2025-09-18 T-  7d [CRITICAL] insolvency         confirmed (4 publishers, 5 articles, conf 0.90)
      AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options
      ALERT raised as of 2025-09-19 T-  6d
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.linkedin.com/posts/irene-garc%C3%ADa-p%C3%A9rez-: The article states that First Brands Group has filed for Chapter 11 bankruptcy.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.linkedin.com/posts/irene-garc%C3%ADa-p%C3%A9rez-: The article states that First Brands Group has filed for Chapter 11 bankruptcy.
+       ~ LLM supports_claim -> no [rejected (overrode keyword tagger)] https://news.bloomberglaw.com/bankruptcy-law/apollo-diameter: The article mentions closing shorts, not seeking options for debt
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.bloomberglaw.com/bankruptcy-law/americas-distre: The article states that First Brands is assessing options for its $6 billion debt pile.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.bloomberg.com/news/articles/2025-09-18/first-bra: The article states that First Brands Group is assessing options for its $6 billion debt pile.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://biztoc.com/x/61a36cd7b8aada5d: The article mentions 'tricky restructuring' which implies the company is seeking options for its debt.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.ft.com/content/44cde1b4-49d7-43b7-beef-a3bc46e36: The article mentions 'tricky restructuring' which implies the company is seeking options for its debt.
        - [major press/corroboration] news.bloomberglaw.com (2025-09-19): "AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options First Brands is assessing options for its $6 billion debt pile after pausing a refinancing attemp"
-       - [major press/corroboration] news.bloomberglaw.com (2025-09-19): "and Diameter Capital Partners have both closed their bets against the debt of troubled auto parts supplier First Brands Group, according to people familiar with"
 
 ?  2025-09-19 T-  6d [elevated] credit             confirmed (4 publishers, 6 articles, conf 0.90)
      AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options
        - [major press/scout] news.bloomberglaw.com (2025-09-19): "AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options First Brands is assessing options for its $6 billion debt pile after pausing a refinancing attemp"
-       - [major press/scout] news.bloomberglaw.com (2025-09-19): "and Diameter Capital Partners have both closed their bets against the debt of troubled auto parts supplier First Brands Group, according to people familiar with"
 
 !! 2025-09-20 T-  5d [CRITICAL] operations         confirmed (3 publishers, 5 articles, conf 0.90)
      Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge
      ALERT raised as of 2025-09-20 T-  5d
+       ~ LLM same_event -> no [kept separate] Newsminimalist: Different focus on debt and financing issues
        - [major press/scout] news.bloomberglaw.com (2025-09-20): "Creditors to After watching in horror, and staying up all night in some cases, investors are taking steps to organize in the event of a restructuring, according"
-       - [major press/scout] bloomberg.com (2025-09-20): "Takeaways by Bloomberg AI Creditors to First Brands Group are tallying paper losses in the billions of dollars and trying to assess the widening damage from una"
 
-?  2025-09-20 T-  5d [CRITICAL] lender_action      single_source (1 publishers, 1 articles, conf 0.20)
-     First Brands creditors face billions in paper losses as company’s ...
-       - [aggregator/social/scout] ainvest.com (2025-09-20): "First Brands creditors face billions in paper losses as company’s $6B debt value plunges Creditors to First Brands Group are tallying paper losses in the billio"
-
-!! 2025-09-20 T-  5d [    high] diligence_red_flag confirmed (6 publishers, 7 articles, conf 0.90)
-     Apollo, Diameter Closed Shorts on Auto-Parts Firm First Brands
-     ALERT raised as of 2025-09-20 T-  5d
-       - [major press/corroboration] news.bloomberglaw.com (2025-09-19): "and Diameter Capital Partners have both closed their bets against the debt of troubled auto parts supplier First Brands Group, according to people familiar with"
-       - [major press/corroboration] bloomberg.com (2025-09-19): "and Diameter Capital Partners have both closed their bets against the debt of troubled auto parts supplier First Brands Group, according to people familiar with"
+!! 2025-09-20 T-  5d [CRITICAL] lender_action      confirmed (4 publishers, 4 articles, conf 0.90)
+     First Brands Mulls Restructuring Options Including Bankruptcy - ...
+     ALERT raised as of 2025-09-22 T-  3d
+       ~ LLM same_event -> no [kept separate] First Brands creditors face billions in paper losses as comp: Different development, focuses on creditors' losses and debt value
+       ~ LLM same_event -> yes [merged] Newsminimalist: same lenders seizing assets or taking control of the company
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://news.bloomberglaw.com/bankruptcy-law/apollo-diameter: The article mentions closing shorts, not creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-19/apollo-di: The article mentions closing shorts, not creditors seizing assets or taking control.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-18/first-bra: The article mentions creditors exploring financing options, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ainvest.com/news/brands-creditors-face-billions-: The article mentions billions in paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.newsminimalist.com/articles/first-brands-group-f: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ft.com/content/44cde1b4-49d7-43b7-beef-a3bc46e36: The article mentions debt plunging and restructuring, but does not mention creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.larepublica.co/globoeconomia/la-empresa-first-br: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://news.bloomberglaw.com/bankruptcy-law/apollo-diameter: The article mentions closing shorts, not creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-19/apollo-di: The article mentions closing shorts, not creditors seizing assets or taking control.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-18/first-bra: The article mentions creditors exploring financing options, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ainvest.com/news/brands-creditors-face-billions-: The article mentions billions in paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.newsminimalist.com/articles/first-brands-group-f: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ft.com/content/44cde1b4-49d7-43b7-beef-a3bc46e36: The article mentions debt plunging and restructuring, but does not mention creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.larepublica.co/globoeconomia/la-empresa-first-br: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.bloomberg.com/news/articles/2025-09-22/first-bra: The article states that First Brands is discussing options with its creditors for restructuring its $6 billion debt load, including a possible Chapter 11 bankruptcy filing.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.investing.com/news/economy-news/first-brands-gro: The article mentions preparing for a possible bankruptcy filing, but does not state that creditors are seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-18/first-bra: The article mentions creditors exploring financing options, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://news.bloomberglaw.com/bankruptcy-law/apollo-diameter: The article mentions closing shorts, not creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-19/apollo-di: The article mentions closing shorts, not creditors seizing assets or taking control.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ainvest.com/news/brands-creditors-face-billions-: The article mentions billions in paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://in.investing.com/news/economy-news/first-brands-grou: The article mentions preparing for a possible bankruptcy filing, but does not state that creditors are seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.newsminimalist.com/articles/first-brands-group-f: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://au.investing.com/news/economy-news/first-brands-grou: The article mentions preparing for a possible bankruptcy filing, but does not state that creditors are seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://ng.investing.com/news/economy-news/first-brands-grou: The article mentions preparing for a possible bankruptcy filing, but does not state that creditors are seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://news.bloomberglaw.com/bankruptcy-law/first-brands-2-: The article discusses a loan rebound, not creditors facing losses or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.ft.com/content/44cde1b4-49d7-43b7-beef-a3bc46e36: The article mentions debt plunging and restructuring, but does not mention creditors seizing assets or taking control of the company.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://biztoc.com/x/d7584ffed8bfe5f6: The article mentions bankruptcy, but it's about the company's finances worsening, not creditors seizing assets or taking control.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.larepublica.co/globoeconomia/la-empresa-first-br: The article mentions creditors facing paper losses, but does not mention lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://fr.investing.com/news/economy-news/first-brands-grou: The article reports that First Brands Group is preparing for possible bankruptcy due to creditor concerns.
+       - [major press/corroboration] bloomberg.com (2025-09-22): "Takeaways by Bloomberg AISubscribe First Brands Group, the auto-parts maker facing a growing wave of doubts about its finances and earnings statements, is discu"
 
 !! 2025-09-22 T-  3d [CRITICAL] insolvency         confirmed (6 publishers, 16 articles, conf 0.90)
      First Brands Mulls Restructuring Options Including Bankruptcy
      ALERT raised as of 2025-09-22 T-  3d
        - [major press/scout] news.bloomberglaw.com (2025-09-22): "The company’s advisers are sounding out lenders for new financing, which could be structured as a so-called debtor-in-possession loan to fund continuing operati"
-       - [major press/scout] bloomberg.com (2025-09-22): "Takeaways by Bloomberg AISubscribe First Brands Group, the auto-parts maker facing a growing wave of doubts about its finances and earnings statements, is discu"
 
-!! 2025-09-23 T-  2d [    high] diligence_red_flag confirmed (7 publishers, 9 articles, conf 0.90)
-     First Brands $2 Billion Loan Rebounds 3 Cents After Selloff
-     ALERT raised as of 2025-09-23 T-  2d
-       - [major press/corroboration] news.bloomberglaw.com (2025-09-22): "term loan had plummeted below 50 cents on the dollar on Friday, down from mid-95 cents over a week before, amid concerns about off-balance sheet financing tied "
-       - [major press/corroboration] octus.com (2025-09-22): "Article First Brands’ Refi on Pause Over Skepticism of Finances, Will Commission Quality of Earnings Report First Brands’ over $6 billion dollar-equivalent refi"
+!! 2025-09-22 T-  3d [    high] diligence_red_flag confirmed (2 publishers, 2 articles, conf 0.90)
+     First Brands’ Refi on Pause Over Skepticism of Finances, Will ...
+     ALERT raised as of 2025-09-22 T-  3d
+       ~ LLM same_event -> no [kept separate] First Brands’ Refi on Pause Over Skepticism of Finances, Wil: Different development, refinancing paused due to skepticism over finances
+       - [major press/scout] octus.com (2025-09-22): "Article First Brands’ Refi on Pause Over Skepticism of Finances, Will Commission Quality of Earnings Report First Brands’ over $6 billion dollar-equivalent refi"
 
 !! 2025-09-25 T-  0d [CRITICAL] insolvency         confirmed (11 publishers, 12 articles, conf 0.90)
      First Brands factoring agreements a USD 2bn variable at play in ...
      ALERT raised as of 2025-09-25 T-  0d
        - [major press/scout] ionanalytics.com (2025-09-25): "First Brands factoring agreements a USD 2bn variable at play in potential Chapter 11 filing – Legal Analysis First Brands, an Ohio-based auto parts company, is "
-       - [major press/scout] autonews.com (2025-09-25): "Fram and Trico owner First Brands preps for Chapter 11 bankruptcy filing, report says RB By Reshmi Basu and Eliza Ronalds-Hannon, Bloomberg Last Updated Septemb"
 
-=== tricolor: 7 events (level >= watch) ===
+=== tricolor: 6 events (level >= watch) ===
 first WATCH: 2025-09-06 T-  4d   first verified ALERT: 2025-09-07 T-  3d
 
-?  2025-09-06 T-  4d [    high] operations         weakly_corroborated (2 publishers, 4 articles, conf 0.50)
+?  2025-09-06 T-  4d [CRITICAL] operations         weakly_corroborated (3 publishers, 5 articles, conf 0.50)
      Tricolor Auto suspends operations, places majority of workforce ...
+       ~ LLM same_event -> yes [merged] Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Di: The new article reports the same company, Tricolor Auto, suspending operations.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Tricolor Auto's operations were suspended and the workforce was temporarily impacted due to a bank seizing control of the company's branches.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Tricolor Auto's operations were suspended and the workforce was temporarily impacted due to a bank seizing control of the company's branches.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/tricolor-auto-suspends-oper: The article states that Tricolor Auto suspends operations and places majority of workforce on temporary leave.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1965143520617918526: The article directly states that Tricolor Auto suspends operations and places the majority of its workforce on temporary leave.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Tricolor Auto's operations were suspended and the workforce was temporarily impacted.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article states that Tricolor Auto has been seized by a bank, leaving 80-90% of its workforce on furlough.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://hoodline.com/2024/01/tricolor-auto-group-revs-up-sur: The article reports on the company's expansion and hiring, but does not mention suspending operations or laying off staff.
        - [trade/wire/scout] news.dealershipguy.com (2025-09-08): "Tricolor Auto suspends operations, places majority of workforce ..."
-       - [aggregator/social/corroboration] memesita.com (2025-09-06): "Tricolor Auto, the Texas-based used car dealer specializing in financing for folks with limited credit and ITINs, has been abruptly seized by an unidentified ba"
 
-?  2025-09-06 T-  4d [CRITICAL] lender_action      weakly_corroborated (2 publishers, 2 articles, conf 0.50)
-     Tricolor Auto Takeover: Texas Banks Seize Dealership – Latest ...
-       - [aggregator/social/scout] memesita.com (2025-09-06): "Tricolor Auto, the Texas-based used car dealer specializing in financing for folks with limited credit and ITINs, has been abruptly seized by an unidentified ba"
-       - [aggregator/social/scout] newsdirectory3.com (2025-09-06): "Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Directory 3 Tricolor ⁢Auto Operations​ Suspended, Workforce Temporarily Impacted Table of Contents Tri"
+?  2025-09-06 T-  4d [CRITICAL] lender_action      weakly_corroborated (3 publishers, 4 articles, conf 0.50)
+     Tricolor Auto suspends operations, places majority of workforce ...
+       ~ LLM same_event -> no [kept separate] Tricolor Auto Takeover: Texas Banks Seize Dealership – Lates: The new article reports a takeover, which is a different development than the existing event of suspending operations, going silent, or laying off staff.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that control of Tricolor auto branches was taken by an unidentified bank.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article reports that Texas banks have seized Tricolor Auto, a used car dealership.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that control of Tricolor auto branches was taken by an unidentified bank.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.sec.gov/Archives/edgar/data/1516912/000151691225: The article mentions Tricolor, but only discusses a bankruptcy case and loan issues, not a takeover or seizure by Texas banks.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article reports that Texas banks have seized Tricolor Auto, a used car dealership.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that control of Tricolor auto branches was taken by an unidentified bank.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.sec.gov/Archives/edgar/data/1516912/000151691225: The article mentions Tricolor, but only discusses a bankruptcy case and loan issues, not a takeover or seizure by Texas banks.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://news.dealershipguy.com/p/tricolor-auto-suspends-oper: The article reports that an unidentified bank took control of Tricolor Auto Group.
+       ~ LLM supports_claim -> yes [accepted (overrode keyword tagger)] https://x.com/GuyDealership/status/1965143520617918526: The article reports that an unidentified bank took control of Tricolor Auto and suspended sales across multiple states.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article reports that Texas banks have seized Tricolor Auto, a used car dealership.
+       - [trade/wire/corroboration] news.dealershipguy.com (2025-09-08): "Tricolor Auto suspends operations, places majority of workforce ..."
 
 !! 2025-09-07 T-  3d [    high] lender_disclosure  confirmed (1 publishers, 1 articles, conf 0.90)
      [sec.gov] The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor
@@ -123,21 +180,24 @@ first WATCH: 2025-09-06 T-  4d   first verified ALERT: 2025-09-07 T-  3d
 !! 2025-09-09 T-  1d [CRITICAL] insolvency         confirmed (16 publishers, 30 articles, conf 0.90)
      After Fifth Third takes credit hit, borrower goes bankrupt | American ...
      ALERT raised as of 2025-09-09 T-  1d
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/exclusive-tricolor-auto-is-: The article directly states that Tricolor Auto is expected to file for bankruptcy, according to sources.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.sec.gov/Archives/edgar/data/1516912/000151691225: The article states that Tricolor filed a Chapter 7 bankruptcy case on September 10, 2025.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.threads.com/@cardealershipguy/post/DOYiw9uDc8u/t: The article directly states that Tricolor Auto Group is expected to file for bankruptcy.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.autofinancenews.net/allposts/risk-management/tri: The article directly states that Tricolor Auto is preparing to file for bankruptcy.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.bloomberg.com/news/articles/2025-09-09/subprime-: The article reports furloughs, not bankruptcy
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://news.dealershipguy.com/p/tricolor-auto-suspends-oper: The article mentions suspension of operations and takeover by a bank, but does not mention bankruptcy.
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://x.com/GuyDealership/status/1965143520617918526: The article reports a bank taking control and suspending sales, but does not mention bankruptcy
+       ~ LLM supports_claim -> no [rejected (keyword agreed)] https://www.univision.com/local/dallas-kuvn/banco-interviene: The article reports a bank taking control of Tricolor Auto, but does not mention bankruptcy.
        - [primary/corroboration] sec.gov (2025-09-07): "The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor, which are primarily secured by notes receivable."
-       - [primary/scout] inforuptcy.com (2025-09-10): "Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas Northern Bankruptcy Court"
 
-!! 2025-09-09 T-  1d [    high] operations         confirmed (3 publishers, 4 articles, conf 0.90)
+!! 2025-09-09 T-  1d [CRITICAL] operations         confirmed (4 publishers, 5 articles, conf 0.90)
      Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
      ALERT raised as of 2025-09-09 T-  1d
+       ~ LLM same_event -> no [kept separate] Tricolor Auto said to furlough employees, shutter operations: Different development (furloughing employees) than the existing event (filing for bankruptcy)
+       ~ LLM same_event -> yes [merged] Banco toma control de Tricolor Auto y ponen en licencia temp: same company, same action (furloughing employees and shutting operations)
        - [major press/scout] bloomberg.com (2025-09-09): "Bonds sold by Texas-based Tricolor Holdings LLC, which provides subprime auto loans, are trading lower this week after a report saying that the company has furl"
-       - [major press/scout] news.bloomberglaw.com (2025-09-10): "Bonds from Tricolor asset backed securities issued earlier this year traded as low as 12 cents on the dollar on Wednesday, according to traders, extending decli"
-
-?  2025-09-09 T-  1d [CRITICAL] lender_action      single_source (1 publishers, 1 articles, conf 0.30)
-     Banco toma control de Tricolor Auto y ponen en licencia temporal ...
-       - [trade/wire/scout] univision.com (2025-09-09): "Con ello, la empresa deja en licencia temporal a entre el 80% y 90% de su fuerza laboral en Texas, Arizona y California."
 
 !! 2025-09-10 T-  0d [CRITICAL] fraud              confirmed (5 publishers, 5 articles, conf 0.90)
      US Department of Justice Probing Tricolor: FT
      ALERT raised as of 2025-09-10 T-  0d
        - [major press/scout] news.bloomberglaw.com (2025-09-10): "The Department of Justice is probing Tricolor over alleged irregularities related to car loans and has contacted people close to the company in recent weeks, th"
-       - [trade/wire/scout] eu.cincinnati.com (2025-09-10): "Fifth Third reports $200M loan mired in fraud investigation, will impact results Fifth Third Bank reported on Sept."

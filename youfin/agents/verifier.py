@@ -20,6 +20,7 @@ from datetime import date, timedelta
 
 from ..risk_tags import RULES
 from ..sources import publisher, tier
+from ..llm import Judge
 from ..youcom import YouClient
 from .scout import JUNK_DOMAINS, _pub_date, matches, score
 
@@ -51,6 +52,8 @@ STOP = set("a an the of to in for on and or as at by with from is are be its it 
 CLUSTER_DAYS = 2           # same development if published within this many days
 VERIFY_WINDOW_DAYS = 5     # keep re-checking an unconfirmed event for this long
 MAX_VERIFY_ATTEMPTS = 3
+LLM_MIN_SIM = 0.15         # below this title overlap, never ask the LLM about a merge
+LLM_MAX_PER_SIGNAL = 2     # bound LLM merge checks per new signal
 
 
 def primary_tag(tags: list[str]) -> str:
@@ -128,8 +131,10 @@ def alert_level(severity: int, verdict: str) -> str:
 
 class Verifier:
     def __init__(self, conn: sqlite3.Connection, client: YouClient | None = None,
-                 min_severity: int = 3, verify_min_severity: int = 4):
+                 min_severity: int = 3, verify_min_severity: int = 4, judge: Judge | None = None,
+                 use_llm: bool = True):
         self.conn = conn
+        self.judge = judge if judge is not None else (Judge(conn) if use_llm else None)
         self.client = client
         self.min_severity = min_severity
         self.verify_min_severity = verify_min_severity
@@ -201,6 +206,7 @@ class Verifier:
             toks = title_tokens(s["title"], aliases)
 
             best, best_score = None, 0.0
+            borderline: list[tuple[float, sqlite3.Row]] = []
             for ev in self.conn.execute(
                 "SELECT * FROM events WHERE counterparty_id=? AND first_published BETWEEN ? AND ?",
                 (cp["id"], (pub - timedelta(days=CLUSTER_DAYS)).isoformat(),
@@ -214,6 +220,23 @@ class Verifier:
                 s_score = max(sim, same_claim)
                 if s_score >= threshold and s_score > best_score:
                     best, best_score = ev, s_score
+                elif sim >= LLM_MIN_SIM or (same_day and ev["primary_tag"] != ptag):
+                    borderline.append((sim, ev))
+            decision = None
+            if best is None and self.judge and borderline:
+                borderline.sort(key=lambda x: -x[0])
+                text = self._article_text(s["url"])[0]
+                for _, ev in borderline[:LLM_MAX_PER_SIGNAL]:
+                    res = self.judge.same_event(ev["headline"], ev["primary_tag"], s["title"], text,
+                                                as_of.isoformat())
+                    if res is None:
+                        break
+                    decision = self.judge.last_decision
+                    if res[0]:
+                        best = ev
+                        self.judge.annotate(decision, ev["id"], "merged")
+                        break
+                    self.judge.annotate(decision, ev["id"], "kept separate")
             if best is not None:
                 event_id = best["id"]
                 merged = sorted(set(json.loads(best["tags"])) | set(tags))
@@ -229,6 +252,8 @@ class Verifier:
                      s["severity"], json.dumps(tags)),
                 )
                 event_id = cur.lastrowid
+            if self.judge and decision and best is None:
+                self.judge.annotate(decision, event_id, "kept separate")
             self.conn.execute("UPDATE signals SET event_id=? WHERE id=?", (event_id, s["id"]))
             self._add_source(event_id, s["url"], s["domain"], "scout", s["published_at"],
                              json.loads(s["matched_terms"]))
@@ -272,7 +297,21 @@ class Verifier:
                     continue
                 domain = re.sub(r"^www\.", "", re.sub(r"^https?://([^/]+).*", r"\1", url))
                 _, tags, terms = score(text, domain)
-                if ev["primary_tag"] not in tags:
+                kw_ok = ev["primary_tag"] in tags
+                if self.judge:
+                    res = self.judge.supports_claim(ev["primary_tag"], ev["headline"], text,
+                                                    as_of.isoformat(), subject=url)
+                    if res is not None:
+                        self.judge.annotate(
+                            self.judge.last_decision, ev["id"],
+                            ("accepted" if res[0] else "rejected")
+                            + (" (keyword agreed)" if kw_ok == res[0] else
+                               " (overrode keyword tagger)"))
+                        if not res[0]:
+                            continue  # LLM: does not support the claim
+                    elif not kw_ok:
+                        continue
+                elif not kw_ok:
                     continue  # mentions the company but does not support this claim
                 self.conn.execute(
                     "INSERT OR IGNORE INTO articles (url, title, description, snippets, page_age, "

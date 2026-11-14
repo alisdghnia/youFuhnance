@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from youfin.agents.verifier import Verifier  # noqa: E402
 from youfin.db import connect  # noqa: E402
+from youfin.llm import SCHEMA_SQL  # noqa: E402
 from youfin.sources import TIER_NAMES  # noqa: E402
 from youfin.youcom import YouClient  # noqa: E402
 
@@ -65,6 +66,10 @@ def report(conn, cps: list[str], events: dict[str, date], min_level: str, receip
             srcs = conn.execute(
                 "SELECT * FROM event_sources WHERE event_id=? ORDER BY tier, published_at LIMIT ?",
                 (r["id"], receipts)).fetchall()
+            for d in conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
+                                  (r["id"],)).fetchall():
+                print(f"       ~ LLM {d['kind']} -> {'yes' if d['answer'] else 'no'} "
+                      f"[{d['applied']}] {(d['subject'] or '')[:60]}: {d['reason']}")
             for s in srcs:
                 print(f"       - [{TIER_NAMES[s['tier']]}/{s['role']}] {s['domain']} "
                       f"({s['published_at']}): \"{(s['quote'] or '')[:160]}\"")
@@ -82,13 +87,15 @@ def main() -> None:
     args = ap.parse_args()
 
     conn = connect()
+    conn.executescript(SCHEMA_SQL)
     cps = args.counterparty or [r["id"] for r in conn.execute("SELECT id FROM counterparties")]
     events = parse_events(args.event)
 
     if args.mode == "reset":
         with conn:
             conn.execute("UPDATE signals SET event_id=NULL")
-            for t in ("event_verifications", "event_sources", "events"):
+            conn.executescript(SCHEMA_SQL)
+            for t in ("event_verifications", "event_sources", "events", "llm_decisions"):
                 conn.execute(f"DELETE FROM {t}")
         print("events cleared")
         return
@@ -112,6 +119,11 @@ def main() -> None:
                 print(f"[{d}] clustered {n:>2} signals | verified: {vs}")
                 for a in alerts:
                     print(f"      !! ALERT {a['counterparty_id']}: {a['headline'][:90]}")
+        j = v.judge
+        if j:
+            avg = j.live_seconds / j.live_calls if j.live_calls else 0
+            print(f"LLM ({j.model}): {j.live_calls} live calls, avg {avg:.1f}s, "
+                  f"{j.cache_hits} cache hits, available={j.available}")
         print(f"\nAPI usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
 
     report(conn, cps, events, args.min_level, args.receipts)
