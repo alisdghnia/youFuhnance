@@ -73,7 +73,58 @@ CREATE TABLE IF NOT EXISTS signals (
     UNIQUE (counterparty_id, url)
 );
 CREATE INDEX IF NOT EXISTS idx_signals_cp ON signals(counterparty_id, published_at);
+
+-- Verifier: one event = one real-world development, however many articles cover it.
+CREATE TABLE IF NOT EXISTS events (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    counterparty_id     TEXT NOT NULL REFERENCES counterparties(id),
+    primary_tag         TEXT NOT NULL,
+    headline            TEXT NOT NULL,
+    first_published     TEXT NOT NULL,
+    first_seen_as_of    TEXT NOT NULL,
+    severity            INTEGER NOT NULL,
+    tags                TEXT NOT NULL,          -- JSON list
+    verdict             TEXT NOT NULL DEFAULT 'single_source',
+    confidence          REAL NOT NULL DEFAULT 0.3,
+    n_publishers        INTEGER NOT NULL DEFAULT 0,
+    best_tier           INTEGER,
+    alert_level         TEXT NOT NULL DEFAULT 'log',  -- log | watch | ALERT
+    alerted_as_of       TEXT,                   -- first date it became ALERT
+    watch_as_of         TEXT,                   -- first date it became watch
+    verify_attempts     INTEGER NOT NULL DEFAULT 0,
+    last_verified_as_of TEXT
+);
+
+CREATE TABLE IF NOT EXISTS event_sources (
+    event_id     INTEGER NOT NULL REFERENCES events(id),
+    url          TEXT NOT NULL REFERENCES articles(url),
+    domain       TEXT NOT NULL,
+    publisher    TEXT NOT NULL,
+    tier         INTEGER NOT NULL,
+    role         TEXT NOT NULL,     -- scout | corroboration
+    published_at TEXT,
+    quote        TEXT,              -- the receipt: sentence supporting the claim
+    PRIMARY KEY (event_id, url)
+);
+
+CREATE TABLE IF NOT EXISTS event_verifications (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id      INTEGER NOT NULL REFERENCES events(id),
+    as_of         TEXT NOT NULL,
+    query         TEXT NOT NULL,
+    freshness     TEXT NOT NULL,
+    n_results     INTEGER NOT NULL,
+    n_supporting  INTEGER NOT NULL,
+    verdict_after TEXT NOT NULL
+);
 """
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(signals)")}
+    if "event_id" not in cols:
+        conn.execute("ALTER TABLE signals ADD COLUMN event_id INTEGER REFERENCES events(id)")
+        conn.commit()
 
 
 def connect(path: Path | str = DB_PATH) -> sqlite3.Connection:
@@ -82,6 +133,7 @@ def connect(path: Path | str = DB_PATH) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 
