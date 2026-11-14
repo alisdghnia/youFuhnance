@@ -9,6 +9,8 @@
    and variance on an equal-weight basket of the counterparty's non-market proxies'
    abnormal returns, fit on an expanding window 2023-01-01..D. The stress regime is the
    high-variance one; P(stress) is its filtered probability at D (no smoothing past D).
+   A fit that did not converge, has non-finite output, or whose two regimes are not
+   separated in variance (the "stress" label would be arbitrary) yields no P(stress).
 3. Window labels (open / closing / closed), from the thresholds below. Every label keeps
    the list of rules that fired, so a human can see why.
 """
@@ -24,6 +26,7 @@ HAZARD = 1 / 250
 RECENT_BARS = 3
 PRIOR = dict(mu=0.0, kappa=1.0, alpha=1.0, beta=1.0)   # data are z-scores: prior scale ~1
 MS_START = "2023-01-01"
+MS_MIN_SD_RATIO = 1.5      # stress sd / calm sd below this: the regimes are not distinct
 
 # ------------------------------------------------------- window thresholds
 # Credit stress shows up as NEGATIVE abnormal returns for every proxy role used here
@@ -80,7 +83,8 @@ def bocpd(x: np.ndarray, hazard: float = HAZARD, prior: dict = PRIOR,
     change-point mass P(r_t = 0) equals the hazard; a break at bar s shows up as mass on
     r_t = t - s + 1 once x_s is better explained by a fresh run (prior predictive) than by
     the long run. We report P(r_t <= recent). Run lengths are tracked explicitly, so
-    pruning negligible long runs is safe. NaN inputs carry the previous value forward.
+    pruning negligible long runs is safe. NaN inputs carry the previous value forward and
+    do not advance run lengths (`recent` then counts observations, not calendar bars).
     """
     n = len(x)
     out = np.full(n, np.nan)
@@ -121,7 +125,8 @@ def markov_stress(basket: pd.Series, as_of, start: str = MS_START,
     """Fit a 2-regime switching-variance model on basket[start..as_of]; P(stress) at as_of."""
     from statsmodels.tsa.regime_switching.markov_regression import MarkovRegression
 
-    y = basket.loc[start:pd.Timestamp(as_of)].dropna() * 100      # percent, for conditioning
+    y = pd.to_numeric(basket, errors="coerce").astype(float)
+    y = y.loc[start:pd.Timestamp(as_of)].dropna() * 100           # percent, for conditioning
     if len(y) < 120:
         return {"p_stress": None, "error": "too few bars"}
     mod = MarkovRegression(y.to_numpy(), k_regimes=2, trend="c", switching_variance=True)
@@ -129,18 +134,32 @@ def markov_stress(basket: pd.Series, as_of, start: str = MS_START,
         warnings.simplefilter("ignore")
         try:
             res = mod.fit(start_params=start_params, disp=False, maxiter=200)
+            names = list(mod.param_names)
+            params = np.asarray(res.params, dtype=float)
+            sig = [float(params[names.index(f"sigma2[{k}]")]) for k in range(2)]
+            stress = int(np.argmax(sig))
+            p = float(np.asarray(res.filtered_marginal_probabilities)[-1, stress])
+            stay = float(params[names.index(f"p[{stress}->{stress}]")]) if stress == 0 else \
+                1.0 - float(params[names.index("p[1->0]")])
+            converged = bool((getattr(res, "mle_retvals", None) or {}).get("converged", True))
         except Exception as e:  # numerical failure must not break an assessment
             return {"p_stress": None, "error": f"{type(e).__name__}: {e}"}
-    names = list(mod.param_names)
-    sig = [res.params[names.index(f"sigma2[{k}]")] for k in range(2)]
-    stress = int(np.argmax(sig))
-    filt = np.asarray(res.filtered_marginal_probabilities)
+    info = {"n_bars": int(len(y)), "bar_date": y.index[-1].date().isoformat()}
+    if not (np.isfinite(params).all() and np.isfinite(p) and min(sig) > 0):
+        return {"p_stress": None, "error": "non-finite Markov fit", **info}
+    if not converged:
+        return {"p_stress": None, "error": "Markov fit did not converge", **info}
+    ratio = float(np.sqrt(max(sig) / min(sig)))
+    if ratio < MS_MIN_SD_RATIO:
+        return {"p_stress": None, **info,
+                "error": f"regimes not separated (sd ratio {ratio:.2f} < {MS_MIN_SD_RATIO:g})"}
     return {
-        "p_stress": float(filt[-1, stress]),
+        "p_stress": min(max(p, 0.0), 1.0),
         "sd_calm_pct": float(np.sqrt(min(sig))), "sd_stress_pct": float(np.sqrt(max(sig))),
-        "mean_stress_pct": float(res.params[names.index(f"const[{stress}]")]),
-        "n_bars": int(len(y)), "bar_date": y.index[-1].date().isoformat(),
-        "params": np.asarray(res.params),
+        "mean_stress_pct": float(params[names.index(f"const[{stress}]")]),
+        # P(stay in stress): near 0.4 means "fat-tail days", not a persistent stress state.
+        "stress_persistence": stay,
+        **info, "params": params,
     }
 
 
@@ -170,7 +189,8 @@ def classify_proxy(f: dict) -> tuple[str, list[str]]:
 
 def classify_overall(rows: list[dict], p_stress: float | None,
                      basket_car5: float | None) -> tuple[str, list[str]]:
-    direct = [r for r in rows if r["role"] in DIRECT_ROLES]
+    # Proxies without data ("n/a") are neither moving nor quiet: leave them out entirely.
+    direct = [r for r in rows if r["role"] in DIRECT_ROLES and r.get("label") != "n/a"]
     closed = [r["ticker"] for r in direct if r["label"] == "closed"]
     hot = [r["ticker"] for r in direct if r["label"] != "open"]
     falling = _nz(basket_car5) < 0

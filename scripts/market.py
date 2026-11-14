@@ -32,6 +32,10 @@ def fmt(x, spec: str, na: str = "-") -> str:
 
 def print_assessment(a: dict) -> None:
     print(f"\n=== {a['counterparty']} as of {a['as_of']} (last close used: {a['bar_date']}) ===")
+    if a.get("price_rule"):
+        print(f"price rule: {a['price_rule']}")
+    for w in a.get("data_warnings", []):
+        print(f"WARNING: {w}")
     hdr = (f"{'ticker':<6} {'role':<14} {'close':>8} {'r1%':>6} {'r3%':>6} {'r5%':>6} {'ar_z':>6} "
            f"{'car5z':>6} {'shk_z':>6} {'vs_z':>6} {'vol_z':>6} {'rv5/60':>6} {'dd20%':>6} "
            f"{'ADV$M':>7} {'bcp_ar':>6} {'bcp_v':>6}  window")
@@ -50,6 +54,8 @@ def print_assessment(a: dict) -> None:
             print(f"{'':<22}why: {'; '.join(r['drivers'])}")
     b = a["basket"]
     print(f"\nbasket (equal-weight abnormal returns of {', '.join(b['members'])}):")
+    if b.get("ms_error"):
+        print(f"  Markov model unavailable: {b['ms_error']}")
     print(f"  Markov P(stress)={fmt(b['p_stress'], '.2f')}  (regime sd calm {fmt(b.get('sd_calm_pct'), '.2f')}% "
           f"vs stress {fmt(b.get('sd_stress_pct'), '.2f')}%/day, {b.get('ms_bars')} bars since {R.MS_START})"
           f"  basket z={fmt(b['z'], '.1f')} car5_z={fmt(b['car5_z'], '.1f')} BOCPD={fmt(b['bocpd'], '.2f')}")
@@ -64,7 +70,7 @@ def print_assessment(a: dict) -> None:
 
 
 def cmd_assess(args, conn) -> None:
-    a = D.assess(conn, args.counterparty, args.as_of)
+    a = D.assess(conn, args.counterparty, args.as_of, after_close=args.after_close)
     print_assessment(a)
     if args.save:
         print(f"\nsaved market_assessments id={D.save(conn, a, 'cli')}")
@@ -88,6 +94,9 @@ def _d(s):
 def cmd_study(args, conn) -> None:
     cp = args.counterparty
     alert = args.alert or _db_alert(conn, cp)
+    for name, v in (("--alert", alert), ("--event", args.event)):
+        if v:
+            date.fromisoformat(v)  # fail before the slow part, not in the middle of the table
     prows, orows, pn = D.study(conn, cp, args.start, args.end)
     days = M.trading_days(pn.prices)
     tick = [p["ticker"] for p in pn.prox]
@@ -110,7 +119,8 @@ def cmd_study(args, conn) -> None:
 
     fb = D.first_breaks(prows, orows)
     print(f"\nFIRST REGIME BREAK vs our ALERT ({alert}); lead = trading sessions from the alert to the "
-          "break (break session counted; negative = market moved first)")
+          "break (break session counted; negative = market moved first;\n  an alert on a trading day "
+          "is treated as after that close: a break that same day is lead +0)")
     print(f"  {'proxy':<7} {'role':<14} {'regime break':<12} {'lead':>5}  {'1st closing':<11} {'lead':>5}  "
           f"{'1st closed':<11} {'lead':>5}  min car5_z")
     for t, b in fb.items():
@@ -281,6 +291,9 @@ def main() -> None:
     a = sub.add_parser("assess")
     a.add_argument("--counterparty", required=True)
     a.add_argument("--as-of", required=True)
+    a.add_argument("--after-close", action="store_true",
+                   help="the alert is known to have come after the close of --as-of, so that "
+                        "session's bar may be used (default: only sessions closed before --as-of)")
     a.add_argument("--save", action="store_true", help="store a market_assessments row")
     a.add_argument("--json", action="store_true")
     s = sub.add_parser("study")
@@ -295,7 +308,10 @@ def main() -> None:
     f.add_argument("--end", default=date.today().isoformat())
     args = ap.parse_args()
     conn = connect()
-    {"assess": cmd_assess, "study": cmd_study, "fetch": cmd_fetch}[args.cmd](args, conn)
+    try:
+        {"assess": cmd_assess, "study": cmd_study, "fetch": cmd_fetch}[args.cmd](args, conn)
+    except (ValueError, KeyError) as e:  # unknown counterparty, bad date, no market data
+        sys.exit(f"market.py {args.cmd}: {e}")
 
 
 if __name__ == "__main__":
