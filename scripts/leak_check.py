@@ -54,6 +54,10 @@ def truncate(src: Path, dst: Path, D: str) -> sqlite3.Connection:
             continue
         if a and a > D:
             x("DELETE FROM bus_messages WHERE id=?", (r["id"],))
+    # Reset the stored FINAL state of the events that remain: an as-of view that still reads these
+    # columns (instead of recomputing from sources/signals dated <= D) differs from the full DB.
+    x("UPDATE events SET verdict='single_source', confidence=0.3, n_publishers=0, best_tier=NULL, "
+      "alert_level='log', severity=0, headline='' ")
     c.commit()
     return c
 
@@ -80,6 +84,9 @@ def first_diff(a, b, path=""):
             if d:
                 return d
     elif a != b:
+        if isinstance(a, str) and isinstance(b, str):
+            k = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+            return f"{path}@{k}: {a[max(0, k - 20):k + 50]!r} != {b[max(0, k - 20):k + 50]!r}"
         return f"{path}: {str(a)[:100]!r} != {str(b)[:100]!r}"
     return None
 
@@ -92,10 +99,7 @@ def consumers(conn, cp, D, dash_full=None):
     out["market assess"] = norm(DM.assess(conn, cp, D))
     cov = {}
     for p in C.load_positions():
-        try:
-            cov[p["id"]] = norm(C.assess(conn, p, D))
-        except Exception as e:  # position unrelated to cp
-            cov[p["id"]] = f"error {type(e).__name__}"
+        cov[p["id"]] = norm(C.assess(conn, p, D))   # an exception here is a FAIL, never a silent equal
     out["covenant assess"] = cov
     X._MARKET_CACHE.clear()
     out["brief"] = X.render_brief(conn, D)
@@ -132,7 +136,12 @@ def main() -> None:
         cp, D = case.split(":")
         print(f"--- {cp} as of {D} (prices used: dated <= {M.price_cutoff(D)})", flush=True)
         cut = truncate(src, tmp / "cut.db", D)
-        ref, got = consumers(full, cp, D), consumers(cut, cp, D)
+        try:
+            ref, got = consumers(full, cp, D), consumers(cut, cp, D)
+        except Exception as e:
+            print(f"  FAIL  consumers raised {type(e).__name__}: {e}")
+            fails += 1
+            continue
         if cp not in full_dash:
             full_dash[cp] = DASH.build(full, cps=[cp], marks=False)
         X._MARKET_CACHE.clear()

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from youfin import market as M  # noqa: E402
 from youfin.agents import market as D  # noqa: E402
+from youfin.agents import covenant as C  # noqa: E402
 from youfin.sources import TIER_NAMES  # noqa: E402
 
 DEFAULT_DB = ROOT / "data" / "youfin.db"
@@ -68,26 +69,24 @@ def level_at(ev, d):
 
 
 def events_at(conn, cp, d):
-    """Events visible on day d, with level/verdict/receipts as they stood on d."""
+    """Events visible on day d, rebuilt AS OF d: verdict/severity/headline/level are re-judged by the
+    Verifier's own judge()/alert_level() (via covenant.events_as_of) on sources and signals dated <= d,
+    never read from the stored (final) columns. Alert/watch stamps are shown only if <= d."""
     out = []
-    for r in conn.execute("SELECT * FROM events WHERE counterparty_id=? ORDER BY id", (cp,)):
-        ev = dict(r)
-        seen = min(x for x in (ev["first_seen_as_of"], ev["watch_as_of"], ev["alerted_as_of"]) if x)
-        if seen > d:
-            continue
-        v = conn.execute("SELECT verdict_after FROM event_verifications WHERE event_id=? AND as_of<=? "
-                         "ORDER BY as_of DESC, id DESC LIMIT 1", (ev["id"], d)).fetchone()
-        srcs = [dict(s) for s in conn.execute(
-            "SELECT domain, publisher, tier, role, published_at, quote, url FROM event_sources WHERE event_id=? "
-            "AND (published_at IS NULL OR substr(published_at,1,10)<=?) ORDER BY tier, published_at", (ev["id"], d))]
+    stamps = {r["id"]: r for r in conn.execute("SELECT id, watch_as_of, alerted_as_of FROM events WHERE counterparty_id=?", (cp,))}
+    for ev in C.events_as_of(conn, cp, d):
+        st = stamps[ev.id]
+        watch = st["watch_as_of"] if st["watch_as_of"] and st["watch_as_of"] <= d else None
+        alert = st["alerted_as_of"] if st["alerted_as_of"] and st["alerted_as_of"] <= d else None
+        srcs = sorted(({k: s.get(k) for k in ("domain", "publisher", "tier", "role", "published_at", "quote", "url")} for s in ev.sources),
+                      key=lambda s: (s["tier"], s["published_at"] or ""))
         for s in srcs:
             s["tier_name"] = TIER_NAMES.get(s["tier"], "?")
-        lvl = level_at(ev, d)
-        out.append({"id": ev["id"], "headline": ev["headline"], "tag": ev["primary_tag"], "severity": ev["severity"],
-                    "level": lvl, "verdict": v[0] if v else ev["verdict"],
-                    "watch_as_of": ev["watch_as_of"], "alerted_as_of": ev["alerted_as_of"],
-                    "new": ("ALERT" if ev["alerted_as_of"] == d else "watch" if ev["watch_as_of"] == d and lvl == "watch" else None),
-                    "escalated": bool(ev["alerted_as_of"] == d and ev["watch_as_of"] and ev["watch_as_of"] < d),
+        lvl = ev.level
+        out.append({"id": ev.id, "headline": ev.headline, "tag": ev.primary_tag, "severity": ev.severity,
+                    "level": lvl, "verdict": ev.verdict, "watch_as_of": watch, "alerted_as_of": alert,
+                    "new": ("ALERT" if alert == d and lvl == "ALERT" else "watch" if watch == d and lvl == "watch" else None),
+                    "escalated": bool(alert == d and lvl == "ALERT" and watch and watch < d),
                     "sources": srcs})
     return out
 
