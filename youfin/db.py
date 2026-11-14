@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS articles (
     page_age    TEXT,       -- publish timestamp reported by You.com
     domain      TEXT,
     markdown    TEXT,       -- full text via Contents API (high-severity hits)
-    fetched_at  TEXT
+    fetched_at  TEXT,
+    highlights  TEXT        -- JSON list: query-relevant passages (Search highlights)
 );
 
 CREATE TABLE IF NOT EXISTS signals (
@@ -124,6 +125,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(signals)")}
     if "event_id" not in cols:
         conn.execute("ALTER TABLE signals ADD COLUMN event_id INTEGER REFERENCES events(id)")
+        conn.commit()
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(articles)")}
+    if "highlights" not in cols:
+        conn.execute("ALTER TABLE articles ADD COLUMN highlights TEXT")  # JSON list
         conn.commit()
 
 

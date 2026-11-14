@@ -72,24 +72,78 @@ def jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(a | b) if a and b else 0.0
 
 
+PAYWALL_DOMAINS = ("ft.com", "wsj.com", "bloomberg.com")
+# Navigation, consent and sign-up boilerplate that is never a supporting sentence.
+BOILERPLATE = re.compile(
+    r"skip to|accessibility help|sign in|log in|subscribe|subscription|newsletter|"
+    r"cookie|privacy policy|terms of (use|service)|all rights reserved|"
+    r"javascript|advertisement|read more|follow us|share this|menu|"
+    r"create (an )?account|already a (subscriber|member)|register (now|for free)|"
+    r"free trial|setze dich|sign up|unlock|premium|paywall|click here",
+    re.I,
+)
+
+
+def is_junk(text: str | None) -> bool:
+    """True for navigation / paywall / cookie-banner text and link-heavy fragments."""
+    if not text or len(text) < 40:
+        return True
+    if BOILERPLATE.search(text) or text.rstrip().endswith(("...", "…")):
+        return True  # boilerplate, or a truncated search-result description
+    if text.count("http") >= 2 or text.count("|") >= 3 or text.count(">") >= 3:
+        return True
+    words = text.split()
+    caps = sum(w[:1].isupper() for w in words)
+    return len(words) >= 8 and caps / len(words) > 0.7  # menu-style Title Case runs
+
+
+def is_paywalled(domain: str | None) -> bool:
+    d = (domain or "").lower()
+    return any(d == p or d.endswith("." + p) for p in PAYWALL_DOMAINS)
+
+
 def _clean_markdown(text: str) -> str:
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)          # images
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)        # links -> anchor text
     text = re.sub(r"^\s*(#+|\||[-*]\s)", " ", text, flags=re.M)  # headings, tables, bullets
+    text = re.sub(r"[*_`]{1,3}", "", text)                       # emphasis markers
     return re.sub(r"\s+", " ", text)
 
 
 def _sentence_with(text: str, terms: list[str], limit: int) -> str | None:
     for s in re.split(r"(?<=[.!?])\s+", _clean_markdown(text)):
-        if len(s) >= 40 and any(t in s.lower() for t in terms):
+        if len(s) >= 40 and any(t in s.lower() for t in terms) and not is_junk(s[:limit]):
             return s.strip()[:limit]
     return None
 
 
-def best_quote(full: str, short: str, terms: list[str], limit: int = 300) -> str:
-    """Sentence that supports the claim: full text first, then the search snippet."""
-    return (_sentence_with(full, terms, limit) or _sentence_with(short, terms, limit)
-            or _clean_markdown(short).strip()[:limit])
+def best_quote(full: str, short: str, terms: list[str], limit: int = 300,
+               highlights: list[str] | None = None) -> str:
+    """Sentence that supports the claim: highlights first, then full text, then snippets.
+
+    Returns "" when nothing clean is found, so callers can fall back to another source.
+    """
+    for h in highlights or []:
+        q = _sentence_with(h, terms, limit)
+        if q:
+            return q
+    q = _sentence_with(full, terms, limit) or _sentence_with(short, terms, limit)
+    if q:
+        return q
+    for h in highlights or []:
+        c = _clean_markdown(h).strip()[:limit]
+        if not is_junk(c):
+            return c
+    c = _clean_markdown(short).strip()[:limit]
+    return "" if is_junk(c) else c
+
+
+def receipt_sources(conn: sqlite3.Connection, event_id: int, n: int = 1) -> list[sqlite3.Row]:
+    """Sources to show as receipts: clean quotes from open sources first, best tier first."""
+    rows = conn.execute("SELECT * FROM event_sources WHERE event_id=? ORDER BY tier, published_at",
+                        (event_id,)).fetchall()
+    rows.sort(key=lambda r: (is_junk(r["quote"]), is_paywalled(r["domain"])))  # stable
+    return rows[:n]
 
 
 @dataclass
@@ -144,10 +198,14 @@ class Verifier:
                           *json.loads(a["snippets"] or "[]")])
         return short, (a["markdown"] or short)
 
+    def _highlights(self, url: str) -> list[str]:
+        a = self.conn.execute("SELECT highlights FROM articles WHERE url=?", (url,)).fetchone()
+        return json.loads(a["highlights"] or "[]") if a else []
+
     def _add_source(self, event_id: int, url: str, domain: str, role: str,
                     published: str | None, terms: list[str]) -> None:
         short, full = self._article_text(url)
-        quote = best_quote(full, short, terms)
+        quote = best_quote(full, short, terms, highlights=self._highlights(url))
         self.conn.execute(
             "INSERT OR IGNORE INTO event_sources VALUES (?,?,?,?,?,?,?,?)",
             (event_id, url, domain, publisher(domain), tier(domain), role, published, quote),
@@ -259,15 +317,16 @@ class Verifier:
             freshness = f"{start.isoformat()}to{as_of.isoformat()}"
             query = f"{cp['name']} {TAG_QUERY.get(ev['primary_tag'], '')}".strip()
             results = self.client.search(query, count=20, freshness=freshness,
-                                         exclude_domains=JUNK_DOMAINS)
+                                         exclude_domains=JUNK_DOMAINS, highlights=True)
             n_new = 0
             for r in results:
                 url = r.get("url")
                 pub = _pub_date(r.get("page_age"))
                 if not url or pub is None or pub > as_of or pub < start:
                     continue  # undated / future (look-ahead) / stale
+                hl = (r.get("contents") or {}).get("highlights") or []
                 text = " ".join([r.get("title") or "", r.get("description") or "",
-                                 *(r.get("snippets") or [])])
+                                 *(r.get("snippets") or []), *hl])
                 if not matches(text, aliases, context):
                     continue
                 domain = re.sub(r"^www\.", "", re.sub(r"^https?://([^/]+).*", r"\1", url))
@@ -280,6 +339,9 @@ class Verifier:
                     (url, r.get("title"), r.get("description"),
                      json.dumps(r.get("snippets") or []), r.get("page_age"), domain),
                 )
+                if hl:
+                    self.conn.execute("UPDATE articles SET highlights=? WHERE url=?",
+                                      (json.dumps(hl), url))
                 before = self.conn.total_changes
                 self._add_source(ev["id"], url, domain, "corroboration", pub.isoformat(), terms)
                 n_new += self.conn.total_changes > before
@@ -297,6 +359,59 @@ class Verifier:
             self.conn.commit()
             out.append((ev["id"], verdict, n_new))
         return out
+
+    # ---------------------------------------------------------------- re-quote
+    def requote(self, search: bool = True) -> dict:
+        """Re-derive every receipt quote from stored data (no API calls); then, for events
+        whose best receipt is still junk or paywalled, fetch highlights once per event."""
+        stats = {"updated": 0, "searches": 0, "stored_highlights": 0}
+        stats["updated"] += self._requote_all()
+        if search and self.client is not None:
+            for ev in self.conn.execute("SELECT * FROM events WHERE alert_level='ALERT' "
+                                        "ORDER BY id").fetchall():
+                best = receipt_sources(self.conn, ev["id"], 1)
+                if best and not is_junk(best[0]["quote"]) and not is_paywalled(best[0]["domain"]):
+                    continue
+                cp = self._cp(ev["counterparty_id"])
+                start = date.fromisoformat(ev["first_published"]) - timedelta(days=CLUSTER_DAYS)
+                end = date.fromisoformat(ev["first_published"]) + timedelta(days=VERIFY_WINDOW_DAYS)
+                query = f"{cp['name']} {TAG_QUERY.get(ev['primary_tag'], '')}".strip()
+                results = self.client.search(query, count=20, highlights=True,
+                                             freshness=f"{start.isoformat()}to{end.isoformat()}",
+                                             exclude_domains=JUNK_DOMAINS)
+                stats["searches"] += 1
+                for r in results:
+                    hl = (r.get("contents") or {}).get("highlights") or []
+                    if hl and self.conn.execute("SELECT 1 FROM event_sources WHERE url=?",
+                                                (r["url"],)).fetchone():
+                        self.conn.execute("UPDATE articles SET highlights=? WHERE url=?",
+                                          (json.dumps(hl), r["url"]))
+                        stats["stored_highlights"] += 1
+            stats["updated"] += self._requote_all()
+        return stats
+
+    def _requote_all(self) -> int:
+        changed = 0
+        rows = self.conn.execute(
+            "SELECT es.event_id, es.url, es.quote, s.matched_terms FROM event_sources es "
+            "LEFT JOIN signals s ON s.url=es.url AND s.event_id=es.event_id").fetchall()
+        for r in rows:
+            terms = json.loads(r["matched_terms"]) if r["matched_terms"] else self._terms(r)
+            short, full = self._article_text(r["url"])
+            quote = best_quote(full, short, terms, highlights=self._highlights(r["url"]))
+            if quote != (r["quote"] or ""):
+                self.conn.execute("UPDATE event_sources SET quote=? WHERE event_id=? AND url=?",
+                                  (quote, r["event_id"], r["url"]))
+                changed += 1
+        self.conn.commit()
+        return changed
+
+    def _terms(self, row: sqlite3.Row) -> list[str]:
+        """Corroboration sources have no signal row: re-score the stored text."""
+        short, full = self._article_text(row["url"])
+        domain = self.conn.execute("SELECT domain FROM articles WHERE url=?",
+                                   (row["url"],)).fetchone()[0] or ""
+        return score(" ".join([short, *self._highlights(row["url"])]), domain)[2]
 
     def step(self, as_of: date, mode: str = "replay"):
         n = self.cluster(as_of)

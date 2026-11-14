@@ -43,8 +43,13 @@ class YouClient:
         freshness: str | None = None,
         exclude_domains: list[str] | None = None,
         include_domains: list[str] | None = None,
+        highlights: bool = False,
     ) -> list[dict[str, Any]]:
-        """Return results.web (news articles are included there)."""
+        """Return results.web (news articles are included there).
+
+        With highlights=True, query-relevant passages come back in
+        r["contents"]["highlights"] instead of r["snippets"]; count must be <= 50.
+        """
         body: dict[str, Any] = {"query": query, "count": count}
         if freshness:
             body["freshness"] = freshness
@@ -52,6 +57,10 @@ class YouClient:
             body["include_domains"] = include_domains
         elif exclude_domains:
             body["exclude_domains"] = exclude_domains
+        if highlights:
+            if count > 50:
+                raise ValueError("highlights extraction supports count <= 50")
+            body["extraction"] = {"extraction_mode": "highlights"}
         data = self._post("/search", body)
         self.calls["search"] += 1
         return data.get("results", {}).get("web", []) or []
