@@ -31,6 +31,7 @@ AGENT_TASKS = {
     "verifier": "YouFin Verifier: clusters signals into events, corroborates them, raises alerts",
     "market": "YouFin Market desk: checks whether public proxies already price an alert",
     "covenant": "YouFin Covenant desk: maps verified alerts to contract triggers and lender actions",
+    "summarizer": "YouFin Summarizer: writes the daily executive summary from the other agents' board posts",
 }
 
 SCHEMA = """
