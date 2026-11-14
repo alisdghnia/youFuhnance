@@ -21,7 +21,7 @@ import uuid
 log = logging.getLogger("youfin.bus")
 
 TOPICS = ("signals", "events", "alerts", "brief")
-MIRROR_TOPICS = ("events", "alerts", "brief")     # raw signals stay local
+MIRROR_TOPICS = ("events", "alerts", "brief", "actions")     # raw signals stay local
 BOARD_PREFIX = "youfin-"
 BOARD_API = os.environ.get("YOUFIN_BOARD_API", "https://app.getopencrawl.com")
 CLI_TIMEOUT_S = 20
