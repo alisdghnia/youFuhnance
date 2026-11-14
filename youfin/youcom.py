@@ -25,15 +25,27 @@ class YouClient:
         self.calls = {"search": 0, "contents_pages": 0}
 
     def _post(self, path: str, body: dict[str, Any], retries: int = 3) -> Any:
+        last = ""
         for attempt in range(retries):
-            resp = self._session.post(f"{BASE}{path}", json=body, timeout=self.timeout)
-            if resp.status_code == 429 or resp.status_code >= 500:
+            if attempt:
                 time.sleep(2 ** attempt)
+            try:
+                resp = self._session.post(f"{BASE}{path}", json=body, timeout=self.timeout)
+            except requests.RequestException as e:
+                # Timeouts / dropped connections are retried like a 5xx. Only the exception
+                # type is kept: request details (headers) must never reach a log.
+                last = type(e).__name__
+                continue
+            if resp.status_code == 429 or resp.status_code >= 500:
+                last = f"HTTP {resp.status_code}"
                 continue
             if resp.status_code != 200:
                 raise YouComError(f"{path} -> HTTP {resp.status_code}: {resp.text[:300]}")
-            return resp.json()
-        raise YouComError(f"{path} failed after {retries} retries")
+            try:
+                return resp.json()
+            except ValueError:
+                last = "invalid JSON body"
+        raise YouComError(f"{path} failed after {retries} attempts ({last})")
 
     def search(
         self,
@@ -63,7 +75,8 @@ class YouClient:
             body["extraction"] = {"extraction_mode": "highlights"}
         data = self._post("/search", body)
         self.calls["search"] += 1
-        return data.get("results", {}).get("web", []) or []
+        results = data.get("results") if isinstance(data, dict) else None
+        return (results or {}).get("web") or []
 
     def contents(self, urls: list[str], formats: tuple[str, ...] = ("markdown",)) -> list[dict]:
         if not urls:
