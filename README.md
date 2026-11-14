@@ -119,7 +119,7 @@ to the OpenCrawl board as topics `youfin-events|alerts|brief|actions`, from iden
 `YOUFIN_BUS_MAX_POSTS` (default 30) caps board posts per DB.
 
 ```
-python3 scripts/team.py replay --start 2025-08-25 --end 2025-09-25 --from-db   # zero You.com cost for Scout
+python3 scripts/team.py replay --start 2025-08-25 --end 2025-09-25 --from-db   # zero You.com cost for Scout (the Verifier still runs billed corroboration searches)
 python3 scripts/team.py status    # bus counts + registered board agents
 python3 scripts/team.py leave     # leave the board
 ```
@@ -141,7 +141,10 @@ Live mode is unchanged.
 
 Private loans and ABS can't simply be sold, so for every verified **ALERT** the market desk
 (`youfin/agents/market.py`, bus agent `market`) asks three questions using only market data
-dated on or before the alert (weekend alerts use Friday's close):
+that existed before the alert. Alerts carry a date but no time of day, so the rule is explicit:
+**only sessions that closed before the alert date are used** (a Tuesday alert sees Monday's close,
+a weekend alert Friday's). `assess --after-close` lets the alert day's own close in when the alert
+is known to have come after it. The price cache never stores a session that is still trading.
 
 1. **Which liquid proxies carry this risk?** `proxies: [{ticker, role}]` per counterparty in
    `data/portfolio.json` (roles `exposed_lender`, `peer`, `customer`, `sector_etf`, `credit`, `market`).
@@ -172,9 +175,11 @@ python3 scripts/market.py study --counterparty first_brands --start 2025-08-01 -
 | | Window at our alert | Market break | Lead | Top hedge candidates at alert |
 |---|---|---|---|---|
 | Tricolor (alert Sun 09-07, close 09-05) | `closing`, but only from JPM (jobs-day bank selloff) and CPSS drift; OBK, FITB, basket quiet | OBK regime break + closed 09-11; CACC 09-12; basket never entered stress (max P 0.39) | OBK +4, CACC +5 | FITB, CACC, OBK |
-| First Brands (alert 09-02) | `open` (basket P(stress) 0.01, no proxy moving) | JEF closed 10-06; basket P(stress) ≥ 0.5 10-06, overall window closed 10-08 | JEF +24, basket +24 | JEF, AZO, ORLY |
+| First Brands (alert Tue 09-02, close 08-29) | `open` (basket P(stress) 0.01, no proxy moving) | JEF closed 10-06; basket P(stress) ≥ 0.5 10-06, overall window closed 10-08 | JEF +24, basket +24 | JEF, AZO, ORLY |
 
 Caveats: the proxy lists were picked knowing who turned out to be exposed; single-day BOCPD misses slow repricing
-(First Brands proxies drifted, so CAR and the basket regime carry that case); labels use daily closes, so the alert
-day's close is included when the alert falls on a trading day; earnings and macro days create false "closing" labels
-that the stored drivers make visible.
+(First Brands proxies drifted, so CAR and the basket regime carry that case); labels use daily closes; earnings and macro days create false "closing" labels
+that the stored drivers make visible; the lead counts an alert on a trading day as arriving after that close
+(a break the same day is lead 0), so it is not flattered by intraday timing; the "stress" regime is the
+high-variance one and in these fits is short-lived (fat-tail days rather than a persistent state); a proxy with
+no bars is shown as `n/a` with a data warning and is left out of the window and the hedge ranking.
