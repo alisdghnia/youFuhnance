@@ -1,4 +1,5 @@
-"""Run Scout + Verifier as a team that talks over the bus (optionally mirrored to OpenCrawl).
+"""Run Scout + Verifier + Market desk as a team that talks over the bus (optionally mirrored to
+OpenCrawl). Verifier `alerts` trigger the Market desk, which publishes on `actions`.
 
   YOUFIN_BUS=local  python scripts/team.py replay --start 2025-08-25 --end 2025-09-25 --from-db
   YOUFIN_BUS=mirror python scripts/team.py replay --start 2025-09-05 --end 2025-09-10 \\
@@ -15,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from youfin.agents.market import MarketDesk  # noqa: E402
 from youfin.agents.scout import Scout  # noqa: E402
 from youfin.agents.verifier import Verifier  # noqa: E402
 from youfin.bus import Bus  # noqa: E402
@@ -28,6 +30,8 @@ def replay(args, conn) -> None:
     cps = args.counterparty or None
     scout = Scout(conn, bus=bus)
     verifier = Verifier(conn, bus=bus)   # subscribes to `signals`
+    market = MarketDesk(conn, bus=bus)   # subscribes to `alerts`, publishes `actions`
+    market.reset()                       # fresh market_assessments for this replay
     print(f"bus backend: {'mirror' if bus.mirror else 'local'}")
     days = [args.start + timedelta(n) for n in range((args.end - args.start).days + 1)]
     for i, d in enumerate(days):
@@ -37,6 +41,7 @@ def replay(args, conn) -> None:
         else:
             scout.sweep(d, mode="replay", counterparty_ids=cps)
         verifier.step(d, "replay")
+        market.step(d)
         msgs = bus.transcript[mark:]
         if not msgs:
             continue
@@ -52,6 +57,7 @@ def replay(args, conn) -> None:
             if m["topic"] != "signals":
                 print(f"  {m['sender']:<8} -> {m['topic']:<7}: {m['payload'].get('summary', '')[:110]}")
     print_alerts(conn, cps)
+    print_actions(bus)
     if bus.mirror or bus.mirror_error or bus.backend == "mirror":
         print(f"\nmirror: {bus.mirror_stats()}" + (f"  (disabled: {bus.mirror_error})" if bus.mirror_error else ""))
 
@@ -62,6 +68,16 @@ def print_alerts(conn, cps) -> None:
                           "WHERE alerted_as_of IS NOT NULL GROUP BY counterparty_id"):
         if not cps or r[0] in cps:
             print(f"  {r[0]}: {r['a']}")
+
+
+def print_actions(bus) -> None:
+    acts = [m for m in bus.transcript if m["topic"] == "actions"]
+    print(f"\nmarket desk actions: {len(acts)}")
+    for m in acts:
+        p = m["payload"]
+        hedges = ", ".join(f"{h['ticker']}({h['score']:.2f})" for h in p["hedge_candidates"])
+        print(f"  {p['counterparty']} event {p['event_id']} as of {p['as_of']} (close {p['bar_date']}): "
+              f"window {p['window']}, basket P(stress) {p['basket_p_stress']}, hedges {hedges}")
 
 
 def status(conn) -> None:
