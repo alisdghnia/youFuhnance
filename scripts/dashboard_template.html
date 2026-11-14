@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>youFuhnance — Ground Truth replay</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e4e7ec;--acc:#3b5bdb;--ok:#12805c;--okb:#e3f6ee;--warn:#9a6700;--warnb:#fff4d6;--bad:#b42318;--badb:#fde8e6;--neu:#475467;--neub:#eef0f3}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1116;--card:#171b22;--ink:#e8ebf0;--mut:#9aa4b2;--line:#2a313c;--acc:#7c93ff;--ok:#4ade80;--okb:#12301f;--warn:#fbbf24;--warnb:#3a2d0b;--bad:#ff8a80;--badb:#3d1713;--neu:#b6bfcc;--neub:#232a34}}
+:root[data-theme=dark]{--bg:#0e1116;--card:#171b22;--ink:#e8ebf0;--mut:#9aa4b2;--line:#2a313c;--acc:#7c93ff;--ok:#4ade80;--okb:#12301f;--warn:#fbbf24;--warnb:#3a2d0b;--bad:#ff8a80;--badb:#3d1713;--neu:#b6bfcc;--neub:#232a34}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:20px;margin:0}h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 10px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.sub{color:var(--mut);margin:2px 0 0}
+button,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.heads{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.big{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap}.num{font-size:34px;font-weight:700;line-height:1}.num small{font-size:13px;font-weight:500;color:var(--mut)}
+.lbl{color:var(--mut);font-size:12px;margin-top:4px}
+.ctl{display:grid;gap:10px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0}
+.ctlrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+input[type=range]{flex:1;min-width:200px;accent-color:var(--acc)}
+.date{font-weight:700;font-size:18px;min-width:120px}
+.tl{position:relative;height:64px;margin:4px 6px 0}
+.tl .axis{position:absolute;left:0;right:0;top:30px;height:3px;background:var(--line);border-radius:2px}
+.tl .fill{position:absolute;left:0;top:30px;height:3px;background:var(--acc);border-radius:2px}
+.tl .cur{position:absolute;top:22px;width:2px;height:19px;background:var(--ink)}
+.mk{position:absolute;transform:translateX(-50%);text-align:center;font-size:11px;white-space:nowrap;color:var(--mut)}
+.mk i{display:block;width:11px;height:11px;border-radius:50%;margin:25px auto 0;border:2px solid var(--card)}
+.mk.up{top:-2px}.mk.up i{margin:0 auto 4px;order:2}
+.mk b{color:var(--ink);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;margin-top:6px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.col{display:grid;gap:14px;align-content:start}
+.badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.b-ok{background:var(--okb);color:var(--ok)}.b-warn{background:var(--warnb);color:var(--warn)}.b-bad{background:var(--badb);color:var(--bad)}.b-neu{background:var(--neub);color:var(--neu)}
+.ev{border-top:1px solid var(--line);padding:10px 0}.ev:first-of-type{border-top:0;padding-top:0}
+.ev .hd{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:4px}.ev .t{font-weight:600}
+.src{display:flex;gap:8px;align-items:flex-start;margin:6px 0 0;font-size:12.5px}
+.chip{flex:none;padding:0 7px;border-radius:6px;font-size:11px;font-weight:600}
+.t0{background:var(--okb);color:var(--ok)}.t1{background:#e3ecff;color:#2848b8}.t2{background:var(--neub);color:var(--neu)}.t3{background:var(--warnb);color:var(--warn)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .t1{background:#1b2850;color:#9db3ff}}
+:root[data-theme=dark] .t1{background:#1b2850;color:#9db3ff}
+.q{color:var(--mut);font-style:italic}a{color:var(--acc)}
+.feed div{display:flex;gap:6px;align-items:baseline;padding:3px 0;font-size:12.5px;border-top:1px dashed var(--line)}.feed div:first-child{border-top:0}
+.feed .arrow{color:var(--mut)}.feed .tx{color:var(--mut);overflow:hidden;text-overflow:ellipsis}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--mut);font-weight:500;padding:3px 4px}td{padding:5px 4px;border-top:1px solid var(--line);vertical-align:top}
+.cav{color:var(--mut);font-size:11.5px}
+.brief{font-size:13px}.brief h2.mdh{font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);margin:10px 0 4px}.brief ul{margin:2px 0 6px 18px;padding:0}.brief blockquote{margin:2px 0 2px 6px;padding-left:8px;border-left:3px solid var(--line);color:var(--mut)}
+.empty{color:var(--mut)}
+img.chart{width:100%;border-radius:8px;border:1px solid var(--line);background:#fff}
+.pos{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0}
+.foot{color:var(--mut);margin-top:24px;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>youFuhnance — Ground Truth replay</h1>
+    <p class="sub">Live-web agents with receipts for a private-credit (ABF) deal team. Hypothetical portfolio; every panel is strictly as-of the slider date.</p></div>
+    <button id="theme" title="Toggle light/dark">Theme</button>
+  </div>
+  <div class="heads" id="heads"></div>
+
+  <div class="ctl card">
+    <div class="ctlrow">
+      <label>Counterparty <select id="cp"></select></label>
+      <span class="date" id="date"></span>
+      <button id="prev">◀</button><button id="play">Play ▶</button><button id="next">▶</button>
+      <input type="range" id="slider" min="0" value="0">
+    </div>
+    <div class="tl" id="tl"></div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card"><h2>Events as of this day</h2><div id="events"></div></div>
+      <div class="card"><h2>Agent message feed (who → topic)</h2><div class="feed" id="feed"></div></div>
+    </div>
+    <div class="col">
+      <div class="card"><h2>Market window</h2><div id="market"></div></div>
+      <div class="card"><h2>Exposure (hypothetical)</h2><div id="pos"></div></div>
+      <div class="card"><h2>Desk actions</h2><div id="actions"></div></div>
+      <div class="card"><h2>Action brief</h2><div class="brief" id="brief"></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Market study (proxy abnormal returns, regime breaks vs our alert)</h2><img class="chart" id="chart" alt="market study chart"></div>
+  <p class="foot" id="foot"></p>
+</div>
+<script id="payload" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById('payload').textContent);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtD = d => new Date(d + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
+const money = x => '$' + Math.round(x / 1e6) + 'M';
+let cp = Object.keys(D.cps)[0], idx = 0, timer = null;
+
+const lvlBadge = l => `<span class="badge ${l==='ALERT'?'b-bad':l==='watch'?'b-warn':'b-neu'}">${esc(l)}</span>`;
+const verdictBadge = v => `<span class="badge ${v==='confirmed'?'b-ok':v==='corroborated'?'b-ok':v==='weakly_corroborated'?'b-warn':'b-neu'}">${esc(String(v).replace('_',' '))}</span>`;
+const winBadge = w => `<span class="badge ${w==='open'?'b-ok':w==='closing'?'b-warn':'b-bad'}" style="font-size:13px;padding:2px 12px">${esc(w.toUpperCase())}</span>`;
+
+function mdLite(md) {
+  let out = '', inList = false;
+  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">link</a>');
+  for (const raw of md.split('\n')) {
+    const l = raw.trimEnd();
+    const li = /^\s*- /.test(l);
+    if (!li && inList) { out += '</ul>'; inList = false; }
+    if (l.startsWith('## ')) out += `<h2 class="mdh">${inline(l.slice(3))}</h2>`;
+    else if (li) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${inline(l.replace(/^\s*- /, ''))}</li>`; }
+    else if (/^\s*> /.test(l)) out += `<blockquote>${inline(l.replace(/^\s*> /, ''))}</blockquote>`;
+    else if (l) out += `<div>${inline(l)}</div>`;
+  }
+  return out + (inList ? '</ul>' : '');
+}
+
+function heads() {
+  $('heads').innerHTML = Object.entries(D.cps).map(([id, c]) => {
+    const m = c.marks;
+    const lead = m.lead_days_to_filing, ls = m.lead_sessions;
+    return `<div class="card"><h2>${esc(c.name)}</h2><div class="big">
+      <div><div class="num">${lead ?? '–'}<small> days</small></div><div class="lbl">first verified ALERT ${m.first_alert ? fmtD(m.first_alert) : '–'} → filing ${m.filing ? fmtD(m.filing) : '–'}</div></div>
+      <div><div class="num">${ls != null ? '+' + ls : '–'}<small> sessions</small></div><div class="lbl">ALERT → first market-proxy break${m.break_ticker ? ' (' + esc(m.break_ticker) + ', ' + fmtD(m.market_break) + ')' : ''}</div></div>
+      </div></div>`;
+  }).join('');
+}
+
+function timeline() {
+  const c = D.cps[cp], m = c.marks, dates = D.dates;
+  const t = s => new Date(s + 'T00:00:00').getTime();
+  const marks = [['First WATCH', m.first_watch, 'var(--warn)'], ['First verified ALERT', m.first_alert, 'var(--bad)'],
+                 ['Market break', m.market_break, 'var(--acc)'], ['Filing', m.filing, 'var(--ink)']].filter(x => x[1]);
+  const lo = t(dates[0]), hi = Math.max(t(dates[dates.length - 1]), ...marks.map(x => t(x[1])));
+  const pos = s => ((t(s) - lo) / (hi - lo)) * 100;
+  let h = `<div class="axis"></div><div class="fill" style="width:${pos(dates[idx])}%"></div><div class="cur" style="left:${pos(dates[idx])}%"></div>`;
+  marks.forEach(([n, d, col], i) => {
+    const up = i % 2 === 1;
+    h += `<div class="mk ${up ? 'up' : ''}" style="left:${pos(d)}%">${up ? `<b>${n}</b> ${fmtD(d)}<i style="background:${col}"></i>` : `<i style="background:${col}"></i><b>${n}</b> ${fmtD(d)}`}</div>`;
+  });
+  h += `<div class="mk" style="left:0;transform:none;top:46px">${fmtD(dates[0])}</div>`;
+  $('tl').innerHTML = h;
+}
+
+function render() {
+  const c = D.cps[cp], d = D.dates[idx], day = c.days[d];
+  $('date').textContent = new Date(d + 'T00:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+  $('slider').value = idx;
+  timeline();
+  // events
+  const evs = day.events.slice().sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0) || b.severity - a.severity);
+  $('events').innerHTML = evs.length ? evs.map(e => `<div class="ev"><div class="hd">${lvlBadge(e.level)}${verdictBadge(e.verdict)}
+      ${e.new ? `<span class="badge b-bad">${e.escalated ? 'ESCALATED' : 'NEW'}</span>` : ''}<span class="badge b-neu">sev ${e.severity}</span><span class="badge b-neu">${esc(e.tag)}</span></div>
+      <div class="t">${esc(e.headline)}</div>
+      ${e.sources.map(s => `<div class="src"><span class="chip t${s.tier}">T${s.tier} ${esc(s.tier_name)}</span><div><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.domain)}</a> <span class="cav">${esc((s.published_at || '').slice(0, 10))}</span>${s.quote ? `<div class="q">“${esc(s.quote)}”</div>` : ''}</div></div>`).join('')}</div>`).join('')
+    : '<div class="empty">No watch/ALERT-level events yet for this counterparty on this day.</div>';
+  // feed
+  $('feed').innerHTML = day.feed.length ? day.feed.map(f => `<div><span class="badge b-neu">${esc(f.sender)}</span><span class="arrow">→</span><span class="badge b-neu">${esc(f.topic)}</span><span class="tx">${esc(f.text)}</span></div>`).join('') : '<div class="empty">No agent traffic on this day.</div>';
+  // market
+  const m = day.market;
+  if (!m) $('market').innerHTML = '<div class="empty">No market data in this database.</div>';
+  else if (m.error || !m.window) $('market').innerHTML = `<div class="empty">${esc(m.error || 'n/a')}</div>`;
+  else {
+    const series = D.dates.slice(0, idx + 1).map(x => c.days[x].market && c.days[x].market.p_stress);
+    const pts = series.map((v, i) => v == null ? null : `${(i / Math.max(D.dates.length - 1, 1) * 300).toFixed(1)},${(40 - v * 40).toFixed(1)}`).filter(Boolean).join(' ');
+    $('market').innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${winBadge(m.window)}<span class="cav">last close used ${esc(m.bar_date)} · basket P(stress) ${m.p_stress == null ? 'n/a' : m.p_stress.toFixed(2)}</span></div>
+      <div class="cav" style="margin:6px 0">${esc((m.drivers || []).join('; '))}</div>
+      <svg viewBox="0 0 300 44" width="100%" height="44" preserveAspectRatio="none" aria-label="basket P(stress) to date"><line x1="0" y1="20" x2="300" y2="20" stroke="var(--line)" stroke-dasharray="3"/><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="${pts}"/></svg>
+      <div class="cav">basket P(stress), Aug 25 → this day (dashed = 0.5)</div>
+      ${m.moving && m.moving.length ? `<div style="margin:6px 0">${m.moving.map(x => `<span class="badge ${x.label === 'closed' ? 'b-bad' : 'b-warn'}">${esc(x.ticker)} ${esc(x.label)}</span>`).join(' ')}</div>` : ''}
+      <table><tr><th>Hedge candidate</th><th>Role</th><th>Score</th><th>Proxy</th></tr>${m.hedges.map(h => `<tr><td><b>${esc(h.ticker)}</b></td><td>${esc(h.role)}</td><td>${h.score.toFixed(2)}</td><td>${esc(h.label)}</td></tr><tr><td colspan="4" class="cav" style="border:0;padding-top:0">${esc(h.caveat)}</td></tr>`).join('')}</table>
+      <div class="cav" style="margin-top:6px">Analysis, not a trade instruction; compliance/MNPI check first.</div>`;
+  }
+  // positions
+  $('pos').innerHTML = c.positions.map(p => `<div class="pos"><span>${esc(p.id)} · ${esc(p.name)}<div class="cav">${esc(p.facility_type)} · ${esc(p.relationship)}</div></span><b>${money(p.commitment_usd)}</b></div>`).join('') + `<div class="pos" style="border-top:1px solid var(--line)"><span>Total</span><b>${money(c.exposure)}</b></div>`;
+  // actions
+  $('actions').innerHTML = day.actions.length ? day.actions.map(a => `<div style="padding:4px 0;border-top:1px solid var(--line)"><span class="badge b-neu">${esc(a.sender)}</span> ${a.today ? '<span class="badge b-bad">NEW</span> ' : ''}${a.stage ? `<span class="badge b-warn">${esc(a.stage)}</span> ` : ''}<span class="cav">${esc(a.as_of)}</span><div>${esc(a.summary)}</div></div>`).join('') : '<div class="empty">No desk actions yet.</div>';
+  $('brief').innerHTML = mdLite(day.brief);
+  if (c.chart) { $('chart').src = 'data:image/png;base64,' + c.chart; $('chart').style.display = ''; } else $('chart').style.display = 'none';
+}
+
+function go(i) { idx = Math.max(0, Math.min(D.dates.length - 1, i)); render(); }
+function stop() { if (timer) { clearInterval(timer); timer = null; $('play').textContent = 'Play ▶'; } }
+$('cp').innerHTML = Object.entries(D.cps).map(([id, c]) => `<option value="${id}">${esc(c.name)}</option>`).join('');
+$('cp').onchange = e => { cp = e.target.value; render(); };
+$('slider').max = D.dates.length - 1;
+$('slider').oninput = e => { stop(); go(+e.target.value); };
+$('prev').onclick = () => { stop(); go(idx - 1); };
+$('next').onclick = () => { stop(); go(idx + 1); };
+$('play').onclick = () => { if (timer) return stop(); if (idx >= D.dates.length - 1) idx = 0; $('play').textContent = 'Pause ❚❚'; timer = setInterval(() => { if (idx >= D.dates.length - 1) return stop(); go(idx + 1); }, 1100); };
+$('theme').onclick = () => { const r = document.documentElement, dark = getComputedStyle(r).getPropertyValue('--bg').trim() === '#0e1116'; r.dataset.theme = dark ? 'light' : 'dark'; };
+$('foot').textContent = D.disclaimer + ' Hypothetical portfolio; market proxies were chosen with hindsight.';
+heads(); render();
+</script>
+</body>
+</html>
