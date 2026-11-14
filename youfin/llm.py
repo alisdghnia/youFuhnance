@@ -21,7 +21,9 @@ from . import config  # noqa: F401  (loads .env before the settings below are re
 HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 if not HOST.startswith("http"):
     HOST = "http://" + HOST
-MODEL = os.environ.get("YOUFIN_LLM_MODEL", "llama3.1:8b")
+MODEL = os.environ.get("YOUFIN_LLM_MODEL", "qwen3:8b")
+# Models with a reasoning ("thinking") mode: turn it off; we want a short JSON verdict.
+THINKING_MODELS = ("qwen3", "deepseek-r1", "gpt-oss")
 TIMEOUT = float(os.environ.get("YOUFIN_LLM_TIMEOUT", "90"))
 MAX_TEXT = 1500
 MAX_FAILURES = 3   # consecutive slow / malformed replies before the judge is switched off
@@ -126,11 +128,14 @@ class Judge:
             return json.loads(row[0]), True, 0.0
         if self.available is False:
             return None, False, 0.0
-        body = json.dumps({
+        payload = {
             "model": self.model, "stream": False, "format": _FORMAT,
             "options": {"temperature": 0},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-        }).encode()
+        }
+        if self.model.startswith(THINKING_MODELS):
+            payload["think"] = False
+        body = json.dumps(payload).encode()
         req = urllib.request.Request(f"{HOST}/api/chat", body, {"Content-Type": "application/json"})
         t0 = time.time()
         try:

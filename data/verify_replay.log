@@ -2,16 +2,16 @@
 [2025-09-02] clustered  2 signals | verified: -
       !! ALERT first_brands: Jefferies among private credit investors exposed to US auto company ...
 [2025-09-03] clustered  4 signals | verified: -
-[2025-09-06] clustered  3 signals | verified: #193:single_source(+0), #194:weakly_corroborated(+0)
-[2025-09-07] clustered  1 signals | verified: #193:single_source(+0), #194:weakly_corroborated(+0)
+[2025-09-06] clustered  3 signals | verified: #208:single_source(+0), #209:weakly_corroborated(+0)
+[2025-09-07] clustered  1 signals | verified: #208:single_source(+0), #209:weakly_corroborated(+0)
       !! ALERT tricolor: [sec.gov] The Bank currently has total loan commitments to Tricolor of approximately $30.1
-[2025-09-08] clustered  1 signals | verified: #193:single_source(+0), #194:weakly_corroborated(+0)
-[2025-09-09] clustered  7 signals | verified: #196:corroborated(+0), #198:single_source(+0)
+[2025-09-08] clustered  1 signals | verified: #208:single_source(+0), #209:weakly_corroborated(+0)
+[2025-09-09] clustered  7 signals | verified: #211:corroborated(+0), #213:single_source(+0)
       !! ALERT tricolor: Exclusive: Tricolor Auto is filing for bankruptcy, sources say
       !! ALERT tricolor: Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
-[2025-09-10] clustered 35 signals | verified: #198:single_source(+0)
+[2025-09-10] clustered 35 signals | verified: #213:single_source(+0)
       !! ALERT tricolor: US Department of Justice Probing Tricolor: FT
-[2025-09-11] clustered  0 signals | verified: #198:single_source(+0)
+[2025-09-11] clustered  0 signals | verified: #213:single_source(+0)
 [2025-09-12] clustered 16 signals | verified: -
 [2025-09-19] clustered  5 signals | verified: -
 [2025-09-20] clustered  5 signals | verified: -
@@ -24,10 +24,9 @@
 [2025-09-24] clustered  1 signals | verified: -
 [2025-09-25] clustered 10 signals | verified: -
       !! ALERT first_brands: First Brands factoring agreements a USD 2bn variable at play in ...
-LLM (llama3.1:8b): 0 live calls, avg 0.0s, 17 cache hits, available=None
-WARNING: 1 LLM call(s) got no answer; those keyword matches / merges were decided without the model
+LLM (qwen3:8b): 13 live calls, avg 2.3s, 5 cache hits, available=True
 Embeddings (nomic-embed-text): 0 texts embedded in 0.0s, 100 cache hits, available=None
-cluster: 0.1s total, 5 LLM same_event calls (0 live)
+cluster: 11.4s total, 5 LLM same_event calls (5 live)
 
 API usage: {'search': 10, 'contents_pages': 0} (~$0.05)
 archive.org: 0 requests, 0 lookups, 70 cache hits
@@ -49,15 +48,15 @@ first WATCH: 2025-09-02 T- 23d   first verified ALERT: 2025-09-02 T- 23d
 ?  2025-09-19 T-  6d [elevated] credit             confirmed (3 publishers, 6 articles, 1 attached by a model, not counted, conf 0.90)
      AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options
        ~ EMB merged 2 at cos >= high (tag/title rule agrees), 2 by the tag/title rule alone (cos 0.84-0.88)
-       ~ LLM same_event (cos 0.89) -> yes [merged (not counted)] Newsminimalist: same credit rating, debt price or loan-market move for the company
+       ~ LLM same_event (cos 0.89) -> yes [merged (not counted)] Newsminimalist: Both articles discuss First Brands' debt value decline and related credit concerns.
        - [major press/scout] news.bloomberglaw.com (2025-09-19): "and Diameter Capital Partners have both closed their bets against the debt of troubled auto parts supplier First Brands Group, according to people familiar with"
 
 !! 2025-09-20 T-  5d [    high] operations         confirmed (4 publishers, 7 articles, 1 attached by a model, not counted, conf 0.90)
      Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge
      ALERT raised as of 2025-09-20 T-  5d
        ~ EMB merged 4 at cos >= high (tag/title rule agrees), 1 by the tag/title rule alone (cos 0.90)
-       ~ LLM same_event (cos 0.92) -> no [kept separate] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Pl: Different development (loans plunging) and creditors' losses
-       ~ LLM same_event (cos 0.93) -> no [kept separate] Newsminimalist: Different focus on debt and financing issues
+       ~ LLM same_event (cos 0.92) -> no [kept separate] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Pl: The new article reports on creditors' losses and uncertainty, while the existing event focuses on First Brands considering debt options.
+       ~ LLM same_event (cos 0.93) -> no [kept separate] Newsminimalist: The new article reports on debt value decline and creditor concerns, not the company suspending operations or going silent.
        ~ EMB cos 0.95 -> [merged (embedding, below min severity; not counted)] First Brands Goes Silent as Loan Crisis Deepens in 2025 - Fr: cos 0.952 >= high 0.94; tag/title rule would not merge
        - [major press/scout] news.bloomberglaw.com (2025-09-20): "Creditors to First Brands Group are tallying paper losses in the billions of dollars and trying to assess the widening damage from unanswered questions swirling"
 
@@ -65,14 +64,14 @@ first WATCH: 2025-09-02 T- 23d   first verified ALERT: 2025-09-02 T- 23d
      First Brands Mulls Restructuring Options Including Bankruptcy
      ALERT raised as of 2025-09-22 T-  3d
        ~ EMB merged 9 at cos >= high (tag/title rule agrees), 5 by the tag/title rule alone (cos 0.87-0.94)
-       ~ LLM same_event (cos 0.91) -> no [kept separate] First Brands Mulls Restructuring Options Including Bankruptc: Different development, bankruptcy filing is a new action
+       ~ LLM same_event (cos 0.91) -> no [kept separate] First Brands Mulls Restructuring Options Including Bankruptc: The new article reports on restructuring options and potential bankruptcy, which is a different development from the company going quiet or suspending operations.
        - [major press/scout] news.bloomberglaw.com (2025-09-22): "First Brands Group, the auto-parts maker facing a growing wave of doubts about its finances and earnings statements, is discussing options with its creditors fo"
 
 !! 2025-09-22 T-  3d [    high] diligence_red_flag confirmed (2 publishers, 2 articles, conf 0.90)
      First Brands’ Refi on Pause Over Skepticism of Finances, Will ...
      ALERT raised as of 2025-09-22 T-  3d
        ~ EMB merged 1 by the tag/title rule alone (cos 0.82)
-       ~ EMB cos 0.84 -> [new event] First Brands’ Refi on Pause Over Skepticism of Finances, Wil: cos 0.844 < low 0.87 vs event 202
+       ~ EMB cos 0.84 -> [new event] First Brands’ Refi on Pause Over Skepticism of Finances, Wil: cos 0.844 < low 0.87 vs event 217
        - [major press/scout] octus.com (2025-09-22): "First Brands’ Refi on Pause Over Skepticism of Finances, Will Commission Quality of Earnings Report First Brands’ refinancing is paused due to skepticism over f"
 
 !! 2025-09-25 T-  0d [CRITICAL] insolvency         confirmed (9 publishers, 10 articles, conf 0.90)
@@ -87,56 +86,57 @@ first WATCH: 2025-09-06 T-  4d   first verified ALERT: 2025-09-07 T-  3d
 ?  2025-09-06 T-  4d [    high] operations         single_source (1 publishers, 2 articles, conf 0.30)
      Tricolor Auto suspends operations, places majority of workforce ...
        ~ EMB merged 1 by the tag/title rule alone (cos 0.83)
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports on Tricolor Auto laying off 1,100 people and shutting down two locations.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports on Tricolor Auto laying off 1,100 people and shutting down two locations.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations, supporting the claim of the company suspending operations or laying off staff.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations, supporting the claim of the company suspending operations or laying off staff.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/tricolor-auto-suspends-oper: The article directly states that Tricolor Auto suspends operations and places majority of workforce on temporary leave.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://x.com/GuyDealership/status/1964168840805237236: The article reports that Tricolor Auto laid off 1,100 people and shut down two locations, supporting the claim of suspending operations and impacting the workforce.
        - [trade/wire/scout] news.dealershipguy.com (2025-09-08): "Tricolor Auto suspends operations, places majority of workforce on temporary leave At the end of the workday on Friday, employees were told they'd be dismissed,"
 
 ?  2025-09-06 T-  4d [CRITICAL] lender_action      weakly_corroborated (2 publishers, 2 articles, conf 0.50)
      Tricolor Auto Takeover: Texas Banks Seize Dealership – Latest ...
        ~ EMB merged 1 by the tag/title rule alone (cos 0.86)
-       ~ EMB cos 0.81 -> [new event] Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Di: cos 0.807 < low 0.87 vs event 193
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Texas banks have seized Tricolor Auto.
-       ~ LLM supports_claim -> no [vetoed keyword match] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions a 'used car crisis' but does not report on lenders seizing assets or taking control of the company.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Texas banks have seized Tricolor Auto.
-       ~ LLM supports_claim -> no [vetoed keyword match] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions a 'used car crisis' but does not report on lenders seizing assets or taking control of the company.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article reports that Texas banks have seized Tricolor Auto.
-       ~ LLM supports_claim -> no [vetoed keyword match] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions a 'used car crisis' but does not report on lenders seizing assets or taking control of the company.
+       ~ EMB cos 0.81 -> [new event] Bank Seizes Tricolor Auto - Dallas Fort Worth Deal - News Di: cos 0.807 < low 0.87 vs event 208
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article mentions a bank seizing Tricolor Auto, which supports the claim of lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions Texas banks seizing a dealership, which supports the claim of lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article mentions a bank seizing Tricolor Auto, which supports the claim of lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions Texas banks seizing a dealership, which supports the claim of lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.newsdirectory3.com/bank-seizes-tricolor-auto-dal: The article mentions a bank seizing Tricolor Auto, which supports the claim of lenders seizing assets or taking control of the company.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.memesita.com/tricolor-auto-takeover-texas-banks-: The article mentions Texas banks seizing a dealership, which supports the claim of lenders seizing assets or taking control of the company.
        - [aggregator/social/scout] memesita.com (2025-09-06): "Tricolor Auto Takeover: Texas Banks Seize Dealership"
 
 !! 2025-09-07 T-  3d [    high] lender_disclosure  confirmed (1 publishers, 1 articles, conf 0.90)
      [sec.gov] The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor
      ALERT raised as of 2025-09-07 T-  3d
-       ~ EMB cos 0.78 -> [new event] obnk-20250907: cos 0.775 < low 0.87 vs event 194
+       ~ EMB cos 0.78 -> [new event] obnk-20250907: cos 0.775 < low 0.87 vs event 209
        - [primary/scout] sec.gov (2025-09-07): "The Bank currently has total loan commitments to Tricolor of approximately $30.1 million to Tricolor, which are primarily secured by notes receivable."
 
 !! 2025-09-09 T-  1d [CRITICAL] insolvency         confirmed (15 publishers, 29 articles, conf 0.90)
      After Fifth Third takes credit hit, borrower goes bankrupt | American ...
      ALERT raised as of 2025-09-09 T-  1d
        ~ EMB merged 10 at cos >= high (tag/title rule agrees), 18 by the tag/title rule alone (cos 0.81-0.93)
-       ~ EMB cos 0.73 -> [new event] Exclusive: Tricolor Auto is filing for bankruptcy, sources s: cos 0.728 < low 0.87 vs event 195
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/exclusive-tricolor-auto-is-: The article directly states that Tricolor Auto is filing for bankruptcy.
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.autofinancenews.net/allposts/risk-management/tri: The article states that Tricolor Auto is preparing to file for bankruptcy.
+       ~ EMB cos 0.73 -> [new event] Exclusive: Tricolor Auto is filing for bankruptcy, sources s: cos 0.728 < low 0.87 vs event 210
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://news.dealershipguy.com/p/exclusive-tricolor-auto-is-: The article directly states that Tricolor Auto is filing for bankruptcy as claimed.
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.autofinancenews.net/allposts/risk-management/tri: The article directly mentions Tricolor Auto preparing to file for bankruptcy, supporting the claim.
        - [primary/scout] inforuptcy.com (2025-09-10): "Case number: 3:25-bk-33498 - Tricolor Auto Receivables LLC - Texas Northern Bankruptcy Court"
 
 !! 2025-09-09 T-  1d [    high] operations         confirmed (2 publishers, 3 articles, conf 0.90)
      Subprime Lender Tricolor’s Bonds Drop After Report of Furloughs ...
      ALERT raised as of 2025-09-09 T-  1d
        ~ EMB merged 2 by the tag/title rule alone (cos 0.89-0.91)
-       ~ EMB cos 0.87 -> [new event] Tricolor Auto said to furlough employees, shutter operations: cos 0.868 < low 0.87 vs event 196
+       ~ EMB cos 0.87 -> [new event] Tricolor Auto said to furlough employees, shutter operations: cos 0.868 < low 0.87 vs event 211
        - [major press/scout] news.bloomberglaw.com (2025-09-10): "Tricolor asset backed securities issued earlier this year traded as low as 12 cents on the dollar on Wednesday, according to traders, extending declines that st"
 
 ?  2025-09-09 T-  1d [CRITICAL] lender_action      single_source (1 publishers, 1 articles, conf 0.30)
      Banco toma control de Tricolor Auto y ponen en licencia temporal ...
-       ~ EMB cos 0.72 -> [new event] Banco toma control de Tricolor Auto y ponen en licencia temp: cos 0.717 < low 0.87 vs event 197
-       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.univision.com/local/dallas-kuvn/banco-interviene: The article states that a bank took control of Tricolor Auto.
+       ~ EMB cos 0.72 -> [new event] Banco toma control de Tricolor Auto y ponen en licencia temp: cos 0.717 < low 0.87 vs event 212
+       ~ LLM supports_claim -> yes [accepted (keyword agreed)] https://www.univision.com/local/dallas-kuvn/banco-interviene: The article directly states that a bank took control of Tricolor Auto and placed most employees on temporary leave, supporting the claim.
        - [trade/wire/scout] univision.com (2025-09-09): "Entre el 80% y 90% de empleados en Texas, Arizona y California fueron puestos en licencia temporal."
 
 !! 2025-09-10 T-  0d [CRITICAL] fraud              confirmed (5 publishers, 9 articles, 4 attached by a model, not counted, conf 0.90)
      US Department of Justice Probing Tricolor: FT
      ALERT raised as of 2025-09-10 T-  0d
        ~ EMB merged 4 by the tag/title rule alone (cos 0.84-0.94)
-       ~ LLM same_event (cos 0.93) -> no [kept separate] Banks Face Losses on Subprime Auto Loans to Tricolor | Fraud: Different development, reporting losses on subprime auto loans rather than bankruptcy
+       ~ LLM same_event (cos 0.93) -> no [kept separate] Banks Face Losses on Subprime Auto Loans to Tricolor | Fraud: The new article reports on potential losses from subprime loans and a fraud probe, which is a different development than the bankruptcy filing.
        ~ EMB cos 0.96 -> [merged (embedding, below min severity; not counted)] JPMorgan, Fifth Third Among Banks Facing Losses Tied to Tric: cos 0.956 >= high 0.94; tag/title rule would not merge
        ~ EMB cos 1.00 -> [merged (embedding, below min severity; not counted)] JPMorgan, Fifth Third Among Banks Facing Losses Tied to Tric: cos 1.000 >= high 0.94; tag/title rule would not merge
        ~ EMB cos 1.00 -> [merged (embedding, below min severity; not counted)] JPMorgan, Fifth Third Among Banks Facing Tricolor Losses (1): cos 0.996 >= high 0.94; tag/title rule would not merge
