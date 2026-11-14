@@ -70,9 +70,15 @@ class Bus:
         self.mirror = self.backend == "mirror"
         self.max_posts = int(os.environ.get("YOUFIN_BUS_MAX_POSTS", "30"))
         self.mirror_error: str | None = None
-        self._variant = 0                    # index of the text layout the board accepts
+        self._variant = 0                    # layout used by the last successful post
+        self._last_error: str | None = None  # board error text from the last rejected layout
         self.transcript: list[dict] = []     # messages published in this process
         conn.executescript(SCHEMA)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(bus_mirror)")}
+        for col, typ in (("variant", "INTEGER"), ("error", "TEXT")):
+            if col not in cols:
+                conn.execute(f"ALTER TABLE bus_mirror ADD COLUMN {col} {typ}")
+        conn.commit()
 
     # ------------------------------------------------------------------ local
     def subscribe(self, agent: str, topics: list[str] | tuple[str, ...]) -> None:
@@ -168,28 +174,36 @@ class Bus:
             self._publish_board(sid, msg_id, topic, sender, payload)
         except MessageRejected as e:  # skip this message only; mirror stays on
             log.warning("board rejected %s: %s", msg_id, e)
-            self.conn.execute("INSERT OR REPLACE INTO bus_mirror (msg_id, topic, ok, secs) VALUES (?,?,0,?)",
-                              (msg_id, topic, round(time.time() - t0, 2)))
+            self.conn.execute(
+                "INSERT OR REPLACE INTO bus_mirror (msg_id, topic, ok, secs, variant, error) "
+                "VALUES (?,?,0,?,NULL,?)", (msg_id, topic, round(time.time() - t0, 2), str(e)[:500]))
             self.conn.commit()
             return
         except Exception as e:  # network/CLI failure must never break the run
             self._disable(f"{type(e).__name__}: {e}")
             return
-        self.conn.execute("INSERT OR REPLACE INTO bus_mirror (msg_id, topic, ok, secs) VALUES (?,?,1,?)",
-                          (msg_id, topic, round(time.time() - t0, 2)))
+        # `error` keeps the rejection text of any richer layout that was refused first,
+        # so the cause of the board's INVALID_USAGE can be diagnosed later.
+        self.conn.execute(
+            "INSERT OR REPLACE INTO bus_mirror (msg_id, topic, ok, secs, variant, error) "
+            "VALUES (?,?,1,?,?,?)",
+            (msg_id, topic, round(time.time() - t0, 2), self._variant, self._last_error))
         self.conn.commit()
 
     def _publish_board(self, sid: str, msg_id: str, topic: str, sender: str, payload: dict) -> None:
-        """Try text layouts from richest to plainest; remember the first one the board accepts
-        (the board rejected some readable-line prefixes with INVALID_USAGE)."""
+        """Try text layouts from richest to plainest for EVERY message (the board rejected some
+        bodies with INVALID_USAGE, cause unknown); a fallback for one message must not strip
+        the readable summary from later ones."""
         board_id = re.sub(r"[^A-Za-z0-9.-]", "-", msg_id)
         variants = render_variants(topic, sender, payload)
         last: Exception | None = None
-        for i in range(self._variant, len(variants)):
+        self._last_error = None
+        for i in range(len(variants)):
             try:
                 board_cli("publish", "--session", sid, "--id", board_id,
                           "--topic", BOARD_PREFIX + topic, "--text", variants[i])
                 self._variant = i
+                self._last_error = str(last)[:500] if last else None
                 return
             except RuntimeError as e:
                 if "BOARD_CONFLICT" in str(e):
