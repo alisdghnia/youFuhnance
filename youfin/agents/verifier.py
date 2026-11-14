@@ -13,14 +13,17 @@ Every source attached to an event keeps a quote: the sentence that supports it.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
+import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from ..embed import Embedder, cosine, enabled as embed_enabled
 from ..risk_tags import RULES
 from ..sources import publisher, tier
-from ..llm import Judge
+from ..llm import Judge, ensure_schema, log_decision
 from ..youcom import YouClient
 from .scout import JUNK_DOMAINS, _pub_date, matches, score, score_as_of
 
@@ -54,6 +57,13 @@ VERIFY_WINDOW_DAYS = 5     # keep re-checking an unconfirmed event for this long
 MAX_VERIFY_ATTEMPTS = 3
 LLM_MIN_SIM = 0.15         # below this title overlap, never ask the LLM about a merge
 LLM_MAX_PER_SIGNAL = 2     # bound LLM merge checks per new signal
+# Embedding "same event?" bands (cosine of title + description vs the closest article already
+# in the candidate event). >= HIGH: same event. [LOW, HIGH): ask the LLM. < LOW: different
+# unless the tag/title rule merges. Calibrated for nomic-embed-text on data/youfin.db
+# (scripts/calibrate_embed.py): different developments of one company reach 0.93 (p90 0.84),
+# syndicated copies 0.88-1.00, paraphrases ~0.87-0.88. Re-calibrate if YOUFIN_EMBED_MODEL changes.
+EMBED_HIGH = float(os.environ.get("YOUFIN_EMBED_HIGH", "0.94"))
+EMBED_LOW = float(os.environ.get("YOUFIN_EMBED_LOW", "0.87"))
 
 
 def primary_tag(tags: list[str]) -> str:
@@ -157,9 +167,22 @@ class Verdict:
     best_tier: int | None
 
 
+# How a source joined its event (event_sources.merge_basis). Sources a model attached on its own
+# (LLM borderline merge, or an embedding merge across primary tags) stay on the event for display
+# and clustering but never count as corroboration and never raise its severity: models may veto,
+# never upgrade. 'embedding_high' (cos >= EMBED_HIGH, same primary tag) counts like the tag rule.
+NOT_COUNTED = ("llm_borderline", "embedding_high_xtag")
+
+
+def counted(source: sqlite3.Row) -> bool:
+    return source["merge_basis"] not in NOT_COUNTED
+
+
 def judge(sources: list[sqlite3.Row]) -> Verdict:
     pubs: dict[str, int] = {}
     for s in sources:
+        if not counted(s):
+            continue
         pubs[s["publisher"]] = min(pubs.get(s["publisher"], 9), s["tier"])
     tiers = list(pubs.values())
     best = min(tiers) if tiers else None
@@ -186,12 +209,17 @@ def alert_level(severity: int, verdict: str) -> str:
 class Verifier:
     def __init__(self, conn: sqlite3.Connection, client: YouClient | None = None,
                  min_severity: int = 3, verify_min_severity: int = 4, judge: Judge | None = None,
-                 use_llm: bool = True, bus=None):
+                 use_llm: bool = True, bus=None, embedder: Embedder | None = None,
+                 use_embed: bool = True):
         self.conn = conn
         self.bus = bus
         if bus is not None:
             bus.subscribe("verifier", ["signals"])
         self.judge = judge if judge is not None else (Judge(conn) if use_llm else None)
+        self.embedder = embedder if embedder is not None else (
+            Embedder(conn) if use_embed and embed_enabled() else None)
+        ensure_schema(conn)
+        self.stats = {"cluster_s": 0.0, "same_event_calls": 0, "same_event_live": 0}
         self.client = client
         self.min_severity = min_severity
         self.verify_min_severity = verify_min_severity
@@ -217,13 +245,15 @@ class Verifier:
         return json.loads(a["highlights"] or "[]") if a else []
 
     def _add_source(self, event_id: int, url: str, domain: str, role: str,
-                    published: str | None, terms: list[str], basis: str = "live") -> None:
+                    published: str | None, terms: list[str], basis: str = "live",
+                    merge_basis: str | None = None) -> None:
         short, full = self._article_text(url)
         quote = best_quote(full, short, terms, highlights=self._highlights(url))
         self.conn.execute(
             "INSERT OR IGNORE INTO event_sources (event_id, url, domain, publisher, tier, role, "
-            "published_at, quote, score_basis) VALUES (?,?,?,?,?,?,?,?,?)",
-            (event_id, url, domain, publisher(domain), tier(domain), role, published, quote, basis),
+            "published_at, quote, score_basis, merge_basis) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (event_id, url, domain, publisher(domain), tier(domain), role, published, quote, basis,
+             merge_basis or role),
         )
 
     def _refresh(self, event_id: int, as_of: date) -> None:
@@ -257,18 +287,56 @@ class Verifier:
         )
 
     # ---------------------------------------------------------------- 1. cluster
-    def cluster(self, as_of: date, signal_ids: list[int] | None = None) -> int:
-        """signal_ids: cluster only these signals (the ones received over the bus)."""
+    def _as_of_text(self, url: str) -> str:
+        """As-of text only: title + description (what replay scoring trusts; no hindsight)."""
+        a = self.conn.execute("SELECT title, description FROM articles WHERE url=?",
+                              (url,)).fetchone()
+        return " ".join([a["title"] or "", a["description"] or ""]).strip() if a else ""
+
+    def _event_cosines(self, url: str, events: list[sqlite3.Row]) -> dict[int, float] | None:
+        """Cosine of the new article vs the closest article already in each candidate event.
+        None when embeddings are off or unavailable (callers then use the old heuristics)."""
+        if self.embedder is None or self.embedder.available is False:
+            return None
+        members = {ev["id"]: [r[0] for r in self.conn.execute(
+            "SELECT url FROM event_sources WHERE event_id=?", (ev["id"],))] for ev in events}
+        urls = list(dict.fromkeys([url, *(u for us in members.values() for u in us)]))
+        vecs = self.embedder.embed([self._as_of_text(u) for u in urls])
+        if vecs is None:
+            return None
+        vec = dict(zip(urls, vecs))
+        return {eid: max((cosine(vec[url], vec[u]) for u in us), default=0.0)
+                for eid, us in members.items()}
+
+    def _log(self, as_of: date, s: sqlite3.Row, event_id: int | None, merged: bool,
+             applied: str, reason: str, score: float | None) -> None:
+        log_decision(self.conn, "embed", as_of.isoformat(), s["title"] or s["url"], merged, reason,
+                     self.embedder.model, True, 0.0, event_id, applied, score)
+
+    def cluster(self, as_of: date, signal_ids: list[int] | None = None,
+                mode: str = "replay") -> int:
+        """signal_ids: cluster only these signals (the ones received over the bus).
+        mode="replay": the LLM sees only as-of text (title + description), never today's snippets.
+
+        Candidates are events of the same counterparty first published within CLUSTER_DAYS.
+        With embeddings: cos >= EMBED_HIGH merges; the tag/title rule still merges; else
+        EMBED_LOW <= cos < EMBED_HIGH asks the LLM; below EMBED_LOW stays separate. Signals
+        below min_severity (no risk keywords, e.g. a paraphrase) never open an event or reach
+        the LLM, but join one when cos >= EMBED_HIGH. Without embeddings: the previous rules.
+        """
+        t_start = time.time()
         only = ""
         if signal_ids is not None:
             only = f"AND s.id IN ({','.join(str(int(i)) for i in signal_ids) or 'NULL'}) "
+        attach = self.embedder is not None and self.embedder.available is not False
         rows = self.conn.execute(
             "SELECT s.*, a.title, a.domain FROM signals s JOIN articles a USING (url) "
-            "WHERE s.event_id IS NULL AND s.first_seen_as_of <= ? AND s.severity >= ? " + only +
-            "ORDER BY s.published_at, s.id",
-            (as_of.isoformat(), self.min_severity),
+            "WHERE s.event_id IS NULL AND s.first_seen_as_of <= ? AND (s.severity >= ? OR "
+            "(? AND s.first_seen_as_of = ?)) " + only + "ORDER BY s.published_at, s.id",
+            (as_of.isoformat(), self.min_severity, int(attach), as_of.isoformat()),
         ).fetchall()
         touched: set[int] = set()
+        n_clustered = 0
         for s in rows:
             cp = self._cp(s["counterparty_id"])
             aliases = [a.lower() for a in json.loads(cp["aliases"])]
@@ -276,46 +344,79 @@ class Verifier:
             ptag = primary_tag(tags)
             pub = _pub_date(s["published_at"]) or date.fromisoformat(s["first_seen_as_of"])
             toks = title_tokens(s["title"], aliases)
-
-            best, best_score = None, 0.0
-            borderline: list[tuple[float, sqlite3.Row]] = []
-            for ev in self.conn.execute(
+            attach_only = s["severity"] < self.min_severity
+            cands = self.conn.execute(
                 "SELECT * FROM events WHERE counterparty_id=? AND first_published BETWEEN ? AND ?",
                 (cp["id"], (pub - timedelta(days=CLUSTER_DAYS)).isoformat(),
                  (pub + timedelta(days=CLUSTER_DAYS)).isoformat()),
-            ):
+            ).fetchall()
+            coss = self._event_cosines(s["url"], cands) if cands else None
+            if attach_only and coss is None:
+                continue  # below min severity: only an embedding match can attach it
+
+            best, best_score, rule = None, (0.0 if coss is None else -2.0), None
+            borderline: list[tuple[float, sqlite3.Row]] = []
+            rule_ok: dict[int, bool] = {}
+            for ev in cands:
                 sim = jaccard(toks, title_tokens(ev["headline"], aliases))
                 same_claim = 0.6 if ev["primary_tag"] == ptag else 0.0
                 same_day = ev["first_published"] == pub.isoformat()
                 # Same-day stories need less title overlap to count as one development.
                 threshold = 0.3 if same_day else 0.5
                 s_score = max(sim, same_claim)
-                if s_score >= threshold and s_score > best_score:
-                    best, best_score = ev, s_score
-                elif sim >= LLM_MIN_SIM or (same_day and ev["primary_tag"] != ptag):
-                    borderline.append((sim, ev))
-            decision = None
+                if coss is None:  # no embeddings: previous behaviour
+                    if s_score >= threshold and s_score > best_score:
+                        best, best_score, rule = ev, s_score, "rule"
+                    elif sim >= LLM_MIN_SIM or (same_day and ev["primary_tag"] != ptag):
+                        borderline.append((sim, ev))
+                    continue
+                cos = coss[ev["id"]]
+                ok = rule_ok[ev["id"]] = s_score >= threshold and not attach_only
+                if ok or cos >= EMBED_HIGH:
+                    # The tag/title rule keeps precedence (its merges count); cos breaks ties.
+                    if best is None or (ok, cos) > (rule == "rule", best_score):
+                        best, best_score, rule = ev, cos, ("rule" if ok else "high")
+                elif cos >= EMBED_LOW and not attach_only:
+                    borderline.append((cos, ev))
+            decision, band_cos = None, None
             if best is None and self.judge and borderline:
                 borderline.sort(key=lambda x: -x[0])
-                text = self._article_text(s["url"])[0]
-                for _, ev in borderline[:LLM_MAX_PER_SIGNAL]:
+                text = (self._as_of_text(s["url"]) if mode == "replay"
+                        else self._article_text(s["url"])[0])
+                for score_, ev in borderline[:LLM_MAX_PER_SIGNAL]:
+                    live_before = self.judge.live_calls
                     res = self.judge.same_event(ev["headline"], ev["primary_tag"], s["title"], text,
                                                 as_of.isoformat())
                     if res is None:
                         break
+                    self.stats["same_event_calls"] += 1
+                    self.stats["same_event_live"] += self.judge.live_calls - live_before
                     decision = self.judge.last_decision
+                    band_cos = score_ if coss is not None else None
                     if res[0]:
-                        best = ev
-                        self.judge.annotate(decision, ev["id"], "merged")
+                        best, rule = ev, "llm"
+                        self.judge.annotate(decision, ev["id"], "merged (not counted)", band_cos)
                         break
-                    self.judge.annotate(decision, ev["id"], "kept separate")
+                    self.judge.annotate(decision, ev["id"], "kept separate", band_cos)
+            if best is None and attach_only:
+                continue
+            if best is None:
+                merge_basis = "opened"
+            elif rule == "llm":
+                merge_basis = "llm_borderline"
+            elif rule == "high":
+                merge_basis = ("embedding_high" if ptag == best["primary_tag"]
+                               else "embedding_high_xtag")
+            else:
+                merge_basis = "rule"
             if best is not None:
                 event_id = best["id"]
-                merged = sorted(set(json.loads(best["tags"])) | set(tags))
-                self.conn.execute(
-                    "UPDATE events SET severity=MAX(severity, ?), tags=? WHERE id=?",
-                    (s["severity"], json.dumps(merged), event_id),
-                )
+                if merge_basis not in NOT_COUNTED:  # a model-only merge never raises severity
+                    merged = sorted(set(json.loads(best["tags"])) | set(tags))
+                    self.conn.execute(
+                        "UPDATE events SET severity=MAX(severity, ?), tags=? WHERE id=?",
+                        (s["severity"], json.dumps(merged), event_id),
+                    )
             else:
                 cur = self.conn.execute(
                     "INSERT INTO events (counterparty_id, primary_tag, headline, first_published, "
@@ -325,15 +426,39 @@ class Verifier:
                 )
                 event_id = cur.lastrowid
             if self.judge and decision and best is None:
-                self.judge.annotate(decision, event_id, "kept separate")
+                self.judge.annotate(decision, event_id, "kept separate", band_cos)
+            if coss:  # log why the embedding path merged or split (report: "~ EMB")
+                top_id = max(coss, key=coss.get)
+                top = coss[top_id]
+                if rule == "rule" and best_score >= EMBED_HIGH:
+                    self._log(as_of, s, event_id, True, "merged (rule + embedding)",
+                              f"cos {best_score:.3f} >= high {EMBED_HIGH}; tag/title rule agrees",
+                              best_score)
+                elif rule == "rule":
+                    self._log(as_of, s, event_id, True, "merged (tag/title rule)",
+                              f"same tag or title overlap; cos {best_score:.3f}", best_score)
+                elif rule == "high":
+                    sub = ", below min severity" if attach_only else ""
+                    cnt = "not counted" if merge_basis in NOT_COUNTED else "counted"
+                    self._log(as_of, s, event_id, True, f"merged (embedding{sub}; {cnt})",
+                              f"cos {best_score:.3f} >= high {EMBED_HIGH}; tag/title rule would "
+                              "not merge", best_score)
+                elif rule is None and decision is None:
+                    why = (f"cos {top:.3f} < low {EMBED_LOW}" if top < EMBED_LOW else
+                           f"cos {top:.3f} in band, LLM unavailable")
+                    self._log(as_of, s, event_id, False, "new event",
+                              f"{why} vs event {top_id}", top)
             self.conn.execute("UPDATE signals SET event_id=? WHERE id=?", (event_id, s["id"]))
             self._add_source(event_id, s["url"], s["domain"], "scout", s["published_at"],
-                             json.loads(s["matched_terms"]), s["score_basis"] or "live")
+                             json.loads(s["matched_terms"]), s["score_basis"] or "live",
+                             merge_basis)
             touched.add(event_id)
+            n_clustered += 1
         for eid in touched:
             self._refresh(eid, as_of)
         self.conn.commit()
-        return len(rows)
+        self.stats["cluster_s"] += time.time() - t_start
+        return n_clustered
 
     # ---------------------------------------------------------------- 2. verify
     def verify(self, as_of: date, mode: str = "replay") -> list[tuple[int, str, int]]:
@@ -475,11 +600,12 @@ class Verifier:
 
     def step(self, as_of: date, mode: str = "replay"):
         if self.bus is None:
-            n = self.cluster(as_of)
+            n = self.cluster(as_of, mode=mode)
             return n, self.verify(as_of, mode)
         before = self._event_state()
         msgs = self.bus.poll("verifier")
-        n = self.cluster(as_of, [m["payload"]["id"] for m in msgs if m["topic"] == "signals"])
+        n = self.cluster(as_of, [m["payload"]["id"] for m in msgs if m["topic"] == "signals"],
+                         mode)
         verified = self.verify(as_of, mode)
         self._publish_changes(before, as_of, n, len(msgs))
         return n, verified

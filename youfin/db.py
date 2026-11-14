@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS event_sources (
     published_at TEXT,
     quote        TEXT,              -- the receipt: sentence supporting the claim
     score_basis  TEXT,              -- text the tags were scored on: live | snapshot | title_desc
+    merge_basis  TEXT,              -- how it joined: opened | rule | embedding_high |
+                                    -- embedding_high_xtag | llm_borderline | corroboration
     PRIMARY KEY (event_id, url)
 );
 
@@ -133,6 +135,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     ecols = {r[1] for r in conn.execute("PRAGMA table_info(event_sources)")}
     if "score_basis" not in ecols:
         conn.execute("ALTER TABLE event_sources ADD COLUMN score_basis TEXT")
+        conn.commit()
+    if "merge_basis" not in ecols:
+        conn.execute("ALTER TABLE event_sources ADD COLUMN merge_basis TEXT")
         conn.commit()
     cols = {r[1] for r in conn.execute("PRAGMA table_info(articles)")}
     if "highlights" not in cols:

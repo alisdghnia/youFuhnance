@@ -40,7 +40,7 @@ SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS llm_cache (key TEXT PRIMARY KEY, response TEXT);
 CREATE TABLE IF NOT EXISTS llm_decisions (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind      TEXT NOT NULL,       -- same_event | supports_claim
+    kind      TEXT NOT NULL,       -- same_event | supports_claim | embed (cluster rule)
     as_of     TEXT,
     event_id  INTEGER,
     subject   TEXT,                -- new title / url that was judged
@@ -49,9 +49,31 @@ CREATE TABLE IF NOT EXISTS llm_decisions (
     model     TEXT,
     cached    INTEGER NOT NULL,
     latency_s REAL NOT NULL,
-    applied   TEXT                 -- what the verifier did with the answer
+    applied   TEXT,                -- what the verifier did with the answer
+    score     REAL                 -- embedding cosine behind the decision, if any
 );
 """
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript(SCHEMA_SQL)
+    if "score" not in {r[1] for r in conn.execute("PRAGMA table_info(llm_decisions)")}:
+        conn.execute("ALTER TABLE llm_decisions ADD COLUMN score REAL")
+        conn.commit()
+
+
+def log_decision(conn: sqlite3.Connection, kind: str, as_of: str | None, subject: str,
+                 answer: bool, reason: str, model: str, cached: bool, latency_s: float,
+                 event_id: int | None = None, applied: str | None = None,
+                 score: float | None = None) -> int:
+    cur = conn.execute(
+        "INSERT INTO llm_decisions (kind, as_of, event_id, subject, answer, reason, model, cached, "
+        "latency_s, applied, score) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (kind, as_of, event_id, (subject or "")[:200], int(answer), reason, model, int(cached),
+         round(latency_s, 2), applied, None if score is None else round(score, 4)))
+    return cur.lastrowid
+
+
 _FORMAT = {"type": "object", "required": ["answer", "reason"], "properties": {
     "answer": {"type": "boolean"}, "reason": {"type": "string"}}}
 
@@ -65,7 +87,7 @@ class Judge:
         self.live_seconds = 0.0
         self.cache_hits = 0
         self.last_decision: int | None = None
-        conn.executescript(SCHEMA_SQL)
+        ensure_schema(conn)
 
     # ------------------------------------------------------------------ plumbing
     def _chat(self, system: str, user: str) -> tuple[dict | None, bool, float]:
@@ -103,18 +125,16 @@ class Judge:
         if out is None:
             self.last_decision = None
             return None
-        cur = self.conn.execute(
-            "INSERT INTO llm_decisions (kind, as_of, subject, answer, reason, model, cached, latency_s) "
-            "VALUES (?,?,?,?,?,?,?,?)",
-            (kind, as_of, subject[:200], int(out["answer"]), out["reason"], self.model,
-             int(cached), round(dt, 2)))
-        self.last_decision = cur.lastrowid
+        self.last_decision = log_decision(self.conn, kind, as_of, subject, out["answer"],
+                                          out["reason"], self.model, cached, dt)
         return out["answer"], out["reason"]
 
-    def annotate(self, decision_id: int | None, event_id: int | None, applied: str) -> None:
+    def annotate(self, decision_id: int | None, event_id: int | None, applied: str,
+                 score: float | None = None) -> None:
         if decision_id:
-            self.conn.execute("UPDATE llm_decisions SET event_id=?, applied=? WHERE id=?",
-                              (event_id, applied, decision_id))
+            self.conn.execute(
+                "UPDATE llm_decisions SET event_id=?, applied=?, score=COALESCE(?, score) WHERE id=?",
+                (event_id, applied, None if score is None else round(score, 4), decision_id))
 
     # ------------------------------------------------------------------ judgments
     def same_event(self, event_headline: str, event_tag: str, new_title: str, new_text: str,

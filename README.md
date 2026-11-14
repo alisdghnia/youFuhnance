@@ -67,7 +67,8 @@ python scripts/scout.py retag
 
 ## Verifier agent
 Runs day by day over Scout signals (severity 3 and above):
-1. **Cluster:** syndicated copies of one story become one *event* (same claim within 2 days, or similar titles).
+1. **Cluster:** syndicated copies of one story become one *event* (same claim within 2 days, similar titles,
+   or similar embeddings: see *Embedding clustering* below).
 2. **Verify:** for unconfirmed high/critical events, a You.com corroboration search limited to articles
    published *up to that day*. Hits count only if they support the same claim.
 3. **Judge:** source tiers (`youfin/sources.py`), counting syndicated outlets once:
@@ -87,18 +88,58 @@ python scripts/verify.py report --min-level ALERT --event tricolor=2025-09-10 --
 python scripts/verify.py reset   # clear events to re-run
 ```
 
-**Result** (`data/verify_alerts.txt`, 20 corroboration searches, about $0.10):
+**Result** (`data/verify_alerts.txt`, 10 corroboration searches, about $0.05):
 - **Tricolor:** the Sep 6 "bank seizes Tricolor" story stays **watch** (only aggregator sources).
   The first **verified ALERT is Sep 7 (T-3d)**: Origin Bank's SEC 8-K, *"total loan commitments to
   Tricolor of approximately $30.1 million"*.
 - **First Brands:** the first **verified ALERT is Sep 2 (T-23d)**: FT, Jefferies exposed to First Brands invoices
-  (6 publishers). Next is Sep 12 (T-13d), the Apollo short (9 publishers).
+  (6 publishers). The Sep 12 Apollo short is confirmed (9 publishers) but stays watch (severity elevated).
 
 **Known limitations**
 - Replays use pages as they look *today*: a snippet can contain later links (e.g. Fitch's July page lists
   the later CCC downgrade). Publish dates are enforced, but snippet text can leak.
 - Paywalled pages (FT) can return navigation text in the quote.
-- Clustering is title/claim based (no LLM yet), so a few related stories stay separate events.
+- Clustering keeps the same-tag-within-2-days rule, which can still merge two different developments
+  that share a risk tag. `nomic-embed-text` is English-first: Spanish copies score low and stay separate.
+
+## Embedding clustering
+
+`youfin/embed.py` embeds each article's as-of text (title + description) with a local Ollama model
+(`ollama pull nomic-embed-text`, ~270 MB; `YOUFIN_EMBED_MODEL`, `off` disables; nomic's `clustering: `
+prefix). Vectors are cached in SQLite (`embeddings`). A new signal is compared with the closest article
+already in each candidate event (same counterparty, within 2 days):
+
+| cosine | decision |
+|---|---|
+| >= 0.94 (`YOUFIN_EMBED_HIGH`) | same event |
+| 0.87 to 0.94 (`YOUFIN_EMBED_LOW`) | ask llama3.1 `same_event` (replay: title + description only) |
+| < 0.87 | different, unless the old tag/title rule merges (it keeps precedence) |
+
+Signals below severity 3 never open an event or reach the LLM, but join one at cos >= 0.94. If Ollama or the
+model is missing, the previous rules run unchanged. `~ EMB` lines in the report show the cosine and rule.
+
+**Calibration** (`python3 scripts/calibrate_embed.py`, 159 stored signals): syndicated copies 0.88 to 1.00
+(median 0.98); different developments of the same company median 0.77, p90 0.84, max 0.93; the Apollo
+paraphrases 0.87 to 0.88. The first guess (0.70/0.85) would merge 8% of different-development pairs
+outright and send 70% to the LLM.
+
+**Models never upgrade a verdict.** `event_sources.merge_basis` records how each source joined
+(`opened | rule | embedding_high | embedding_high_xtag | llm_borderline | corroboration`). Sources attached
+by the LLM, or by an embedding match across primary tags, stay on the event ("attached by a model, not
+counted") but `judge()` ignores them and they do not raise severity. `embedding_high` (same primary tag)
+would count, but the same-tag rule already merges those, so in practice it never occurs.
+
+| Replay 07-01 to 09-25 | before | after |
+|---|---|---|
+| First Brands events (ALERT / watch) | 8 (5 / 3) | 7 (5 / 2) |
+| Tricolor events (ALERT / watch / log) | 7 (4 / 2 / 1) | 8 (4 / 3 / 1) |
+| LLM `same_event` calls | 6 | 5 |
+| cluster time, cold caches | 14.7 s | 12.8 s (2.9 s of it embedding) |
+| first verified ALERT | First Brands 09-02, Tricolor 09-07 | unchanged |
+
+Known misses: "Apollo Global's High-Stakes Bet" (09-12) has no risk keywords (severity 0) and scores 0.88
+against the Apollo event, so it stays out. "Diameter and Apollo unwind shorts" (09-23) now joins "Refi on
+Pause" (09-22) via the same-tag rule. The Spanish Univision copy (cos 0.72) is its own event.
 
 ## Agent team bus
 

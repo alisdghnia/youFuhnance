@@ -17,9 +17,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from youfin.agents.verifier import Verifier, receipt_sources  # noqa: E402
+from youfin.agents.verifier import NOT_COUNTED, Verifier, receipt_sources  # noqa: E402
 from youfin.db import connect  # noqa: E402
-from youfin.llm import SCHEMA_SQL  # noqa: E402
+from youfin.llm import ensure_schema  # noqa: E402
 from youfin.sources import TIER_NAMES  # noqa: E402
 from youfin.youcom import YouClient  # noqa: E402
 
@@ -55,22 +55,43 @@ def report(conn, cps: list[str], events: dict[str, date], min_level: str, receip
         print(f"first WATCH: {first_watch} {lead(first_watch, ev_date)}   "
               f"first verified ALERT: {first_alert} {lead(first_alert, ev_date)}")
         for r in rows:
-            n_src = conn.execute("SELECT COUNT(*) FROM event_sources WHERE event_id=?",
-                                 (r["id"],)).fetchone()[0]
+            n_src, n_model = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(merge_basis IN (%s)), 0) FROM event_sources "
+                "WHERE event_id=?" % ",".join("?" * len(NOT_COUNTED)),
+                (*NOT_COUNTED, r["id"])).fetchone()
+            model = f", {n_model} attached by a model, not counted" if n_model else ""
             print(f"\n{LEVEL_ICON[r['alert_level']]} {r['first_published']} "
                   f"{lead(r['first_published'], ev_date)} [{SEV[r['severity']]:>8}] "
                   f"{r['primary_tag']:<18} {r['verdict']} ({r['n_publishers']} publishers, "
-                  f"{n_src} articles, conf {r['confidence']:.2f})")
+                  f"{n_src} articles{model}, conf {r['confidence']:.2f})")
             print(f"     {r['headline'][:110]}")
             if r["alerted_as_of"]:
                 print(f"     ALERT raised as of {r['alerted_as_of']} {lead(r['alerted_as_of'], ev_date)}")
             srcs = receipt_sources(conn, r["id"], receipts)
-            for d in conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
-                                  (r["id"],)).fetchall():
-                print(f"       ~ LLM {d['kind']} -> {'yes' if d['answer'] else 'no'} "
+            decisions = conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
+                                     (r["id"],)).fetchall()
+            routine = ("merged (rule + embedding)", "merged (tag/title rule)")
+            both = [d["score"] for d in decisions if d["applied"] == routine[0]]
+            rule = [d["score"] for d in decisions if d["applied"] == routine[1]]
+            parts = [f"{len(both)} at cos >= high (tag/title rule agrees)"] if both else []
+            if rule:
+                parts.append(f"{len(rule)} by the tag/title rule alone (cos {min(rule):.2f}"
+                             + (f"-{max(rule):.2f})" if len(rule) > 1 else ")"))
+            if parts:
+                print(f"       ~ EMB merged {', '.join(parts)}")
+            for d in decisions:
+                if d["applied"] in routine:
+                    continue
+                if d["kind"] == "embed":
+                    print(f"       ~ EMB cos {d['score']:.2f} -> [{d['applied']}] "
+                          f"{(d['subject'] or '')[:60]}: {d['reason']}")
+                    continue
+                cos = f" (cos {d['score']:.2f})" if d["score"] is not None else ""
+                print(f"       ~ LLM {d['kind']}{cos} -> {'yes' if d['answer'] else 'no'} "
                       f"[{d['applied']}] {(d['subject'] or '')[:60]}: {d['reason']}")
             for s in srcs:
-                print(f"       - [{TIER_NAMES[s['tier']]}/{s['role']}] {s['domain']} "
+                nc = f", {s['merge_basis']}: not counted" if s["merge_basis"] in NOT_COUNTED else ""
+                print(f"       - [{TIER_NAMES[s['tier']]}/{s['role']}{nc}] {s['domain']} "
                       f"({s['published_at']}): \"{(s['quote'] or '')[:160]}\"")
 
 
@@ -86,14 +107,13 @@ def main() -> None:
     args = ap.parse_args()
 
     conn = connect()
-    conn.executescript(SCHEMA_SQL)
+    ensure_schema(conn)
     cps = args.counterparty or [r["id"] for r in conn.execute("SELECT id FROM counterparties")]
     events = parse_events(args.event)
 
     if args.mode == "reset":
         with conn:
             conn.execute("UPDATE signals SET event_id=NULL")
-            conn.executescript(SCHEMA_SQL)
             for t in ("event_verifications", "event_sources", "events", "llm_decisions"):
                 conn.execute(f"DELETE FROM {t}")
         print("events cleared")
@@ -129,6 +149,13 @@ def main() -> None:
             avg = j.live_seconds / j.live_calls if j.live_calls else 0
             print(f"LLM ({j.model}): {j.live_calls} live calls, avg {avg:.1f}s, "
                   f"{j.cache_hits} cache hits, available={j.available}")
+        e = v.embedder
+        if e:
+            print(f"Embeddings ({e.model}): {e.live_texts} texts embedded in {e.live_seconds:.1f}s, "
+                  f"{e.cache_hits} cache hits, available={e.available}")
+        st = v.stats
+        print(f"cluster: {st['cluster_s']:.1f}s total, {st['same_event_calls']} LLM same_event "
+              f"calls ({st['same_event_live']} live)")
         print(f"\nAPI usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
         a = getattr(v, "archive", None)
         if a:
