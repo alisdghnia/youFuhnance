@@ -147,7 +147,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
 def connect(path: Path | str = DB_PATH) -> sqlite3.Connection:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=30)  # Scout / Verifier / desk may run as separate processes
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
@@ -160,20 +160,25 @@ def load_portfolio(conn: sqlite3.Connection, portfolio: dict) -> None:
     with conn:
         for cp in portfolio["counterparties"]:
             conn.execute(
-                "INSERT OR REPLACE INTO counterparties VALUES (?,?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO counterparties (id, name, role, sector, aliases, context, "
+                "queries) VALUES (?,?,?,?,?,?,?)",
                 (cp["id"], cp["name"], cp.get("role"), cp.get("sector"),
                  json.dumps(cp["aliases"]), json.dumps(cp.get("context", [])),
                  json.dumps(cp["queries"])),
             )
         for p in portfolio["positions"]:
             conn.execute(
-                "INSERT OR REPLACE INTO positions VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO positions (id, name, asset_class, facility_type, collateral, "
+                "commitment_usd, hypothetical, notes) VALUES (?,?,?,?,?,?,?,?)",
                 (p["id"], p["name"], p["asset_class"], p.get("facility_type"),
                  p.get("collateral"), p.get("commitment_usd"),
                  int(p.get("hypothetical", True)), p.get("notes")),
             )
+            # Links dropped from portfolio.json must not linger.
+            conn.execute("DELETE FROM position_counterparties WHERE position_id=?", (p["id"],))
             for link in p["counterparties"]:
                 conn.execute(
-                    "INSERT OR REPLACE INTO position_counterparties VALUES (?,?,?)",
+                    "INSERT OR REPLACE INTO position_counterparties (position_id, "
+                    "counterparty_id, relationship) VALUES (?,?,?)",
                     (p["id"], link["id"], link.get("relationship")),
                 )

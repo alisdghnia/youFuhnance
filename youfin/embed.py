@@ -11,11 +11,12 @@ import hashlib
 import json
 import os
 import sqlite3
+import sys
 import time
 import urllib.request
 from array import array
 
-from .llm import HOST
+from .llm import HOST, MAX_FAILURES, is_down
 
 MODEL = os.environ.get("YOUFIN_EMBED_MODEL", "nomic-embed-text")  # "" or "off" disables
 TIMEOUT = float(os.environ.get("YOUFIN_EMBED_TIMEOUT", "60"))
@@ -52,6 +53,8 @@ class Embedder:
         self.live_texts = 0
         self.live_seconds = 0.0
         self.cache_hits = 0
+        self.failed_calls = 0
+        self._streak = 0
         self._mem: dict[str, array] = {}
         conn.executescript(SCHEMA_SQL)
 
@@ -85,11 +88,19 @@ class Embedder:
             try:
                 with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                     vecs = json.loads(r.read())["embeddings"]
-                assert len(vecs) == len(todo)
-            except Exception:
-                self.available = False  # server down / model not pulled: heuristics take over
+                if len(vecs) != len(todo) or not all(vecs):
+                    raise ValueError("embedding count mismatch")
+            except Exception as e:  # this call falls back to the tag/title heuristics
+                self.failed_calls += 1
+                self._streak += 1
+                if is_down(e) or self._streak >= MAX_FAILURES:
+                    self.available = False
+                    print(f"[embed] {self.model} unavailable ({type(e).__name__}); clustering "
+                          "falls back to the tag/title rules for the rest of this run",
+                          file=sys.stderr)
                 return None
             self.available = True
+            self._streak = 0
             self.live_seconds += time.time() - t0
             self.live_texts += len(todo)
             for k, vec in zip(todo, vecs):

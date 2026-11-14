@@ -31,14 +31,18 @@ def parse_events(items: list[str] | None) -> dict[str, date]:
     out = {}
     for it in items or []:
         cp, _, d = it.partition("=")
-        out[cp] = date.fromisoformat(d)
+        try:
+            out[cp] = date.fromisoformat(d)
+        except ValueError:
+            sys.exit(f"--event expects counterparty=YYYY-MM-DD (e.g. tricolor=2025-09-10), got {it!r}")
     return out
 
 
 def lead(d: str | None, event: date | None) -> str:
     if not (d and event):
         return "      "
-    return f"T-{(event - date.fromisoformat(d)).days:>3}d"
+    days = (event - date.fromisoformat(d)).days
+    return f"T{'-' if days >= 0 else '+'}{abs(days):>3}d"  # T+ = after the credit event
 
 
 def report(conn, cps: list[str], events: dict[str, date], min_level: str, receipts: int) -> None:
@@ -112,18 +116,33 @@ def main() -> None:
     events = parse_events(args.event)
 
     if args.mode == "reset":
+        # One transaction; limited to --counterparty when given (it used to clear everything).
+        marks = ",".join("?" * len(cps))
+        evs = f"SELECT id FROM events WHERE counterparty_id IN ({marks})"
         with conn:
-            conn.execute("UPDATE signals SET event_id=NULL")
-            for t in ("event_verifications", "event_sources", "events", "llm_decisions"):
-                conn.execute(f"DELETE FROM {t}")
-        print("events cleared")
+            conn.execute(f"UPDATE signals SET event_id=NULL WHERE counterparty_id IN ({marks})", cps)
+            for t in ("event_verifications", "event_sources", "llm_decisions"):
+                conn.execute(f"DELETE FROM {t} WHERE event_id IN ({evs})", cps)
+            if not args.counterparty:
+                conn.execute("DELETE FROM llm_decisions")  # incl. decisions not tied to an event
+            conn.execute(f"DELETE FROM events WHERE counterparty_id IN ({marks})", cps)
+        print(f"events cleared for {', '.join(cps) or 'no counterparties'}")
         return
 
     if args.mode == "requote":
-        v = Verifier(conn, YouClient())
+        try:
+            client = YouClient()
+        except RuntimeError:  # no API key: stored data only
+            client = None
+        v = Verifier(conn, client, use_llm=False, use_embed=False)
         stats = v.requote()
         print(f"requote: {stats}")
-        print(f"API usage: {v.client.calls} (~${v.client.calls['search'] * 0.005:.2f})")
+        if client is None:
+            print("no You.com key: quotes re-derived from stored data only")
+        else:
+            print(f"API usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
+        for e in v.errors:
+            print(f"WARNING: {e}")
 
     if args.mode in ("replay", "live"):
         client = YouClient()
@@ -131,8 +150,8 @@ def main() -> None:
         if args.mode == "live":
             days = [date.today()]
         else:
-            if not (args.start and args.end):
-                ap.error("replay needs --start and --end")
+            if not (args.start and args.end) or args.start > args.end:
+                ap.error("replay needs --start and --end, with start <= end")
             days = [args.start + timedelta(n) for n in range((args.end - args.start).days + 1)]
         for d in days:
             n, verified = v.step(d, args.mode)
@@ -149,6 +168,9 @@ def main() -> None:
             avg = j.live_seconds / j.live_calls if j.live_calls else 0
             print(f"LLM ({j.model}): {j.live_calls} live calls, avg {avg:.1f}s, "
                   f"{j.cache_hits} cache hits, available={j.available}")
+            if j.failed_calls:
+                print(f"WARNING: {j.failed_calls} LLM call(s) got no answer; those keyword matches / "
+                      "merges were decided without the model")
         e = v.embedder
         if e:
             print(f"Embeddings ({e.model}): {e.live_texts} texts embedded in {e.live_seconds:.1f}s, "
@@ -157,6 +179,11 @@ def main() -> None:
         print(f"cluster: {st['cluster_s']:.1f}s total, {st['same_event_calls']} LLM same_event "
               f"calls ({st['same_event_live']} live)")
         print(f"\nAPI usage: {client.calls} (~${client.calls['search'] * 0.005:.2f})")
+        if v.errors:
+            print(f"WARNING: {len(v.errors)} corroboration search(es) failed and were not counted "
+                  "as attempts:")
+            for e in v.errors:
+                print(f"  {e}")
         a = getattr(v, "archive", None)
         if a:
             print(f"archive.org: {a.requests} requests, {a.lookups} lookups, {a.cache_hits} cache hits")

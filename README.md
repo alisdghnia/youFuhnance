@@ -62,7 +62,8 @@ Cost: 99 searches plus 36 pages, about $0.53.
 ```bash
 python scripts/scout.py replay --counterparty first_brands --start 2025-07-01 --end 2025-09-25 \
     --step 7 --daily-from 2025-09-01 --event 2025-09-25 --fetch 4 --min-severity 2
-# After changing rules in youfin/risk_tags.py, re-score stored hits without new API calls:
+# After changing rules in youfin/risk_tags.py, re-score stored hits without new API calls
+# (signals collected by a replay are always re-scored on their as-of text, never today's snippets):
 python scripts/scout.py retag
 ```
 
@@ -99,7 +100,8 @@ python scripts/verify.py reset   # clear events to re-run
 **Known limitations**
 - Replays use pages as they look *today*: a snippet can contain later links (e.g. Fitch's July page lists
   the later CCC downgrade). Publish dates are enforced, but snippet text can leak.
-- Paywalled pages (FT) can return navigation text in the quote.
+- Live mode: paywalled pages (FT) can return navigation text in the quote. Replay quotes come from
+  as-of text only, so a source with no usable sentence is quoted by its headline.
 - Clustering keeps the same-tag-within-2-days rule, which can still merge two different developments
   that share a risk tag. `nomic-embed-text` is English-first: Spanish copies score low and stay separate.
 
@@ -140,7 +142,16 @@ would count, but the same-tag rule already merges those, so in practice it never
 
 Known misses: "Apollo Global's High-Stakes Bet" (09-12) has no risk keywords (severity 0) and scores 0.88
 against the Apollo event, so it stays out. "Diameter and Apollo unwind shorts" (09-23) now joins "Refi on
-Pause" (09-22) via the same-tag rule. The Spanish Univision copy (cos 0.72) is its own event.
+Pause" (09-22) via the same-tag rule (cos 0.82). A cosine floor for same-tag merges on different days
+was checked and rejected: correct cross-day merges in this data sit at 0.79 to 0.86 (the German Deloitte
+story 0.79, the court docket 0.81, the furlough follow-up 0.83), so no threshold separates the wrong pair
+from the right ones. The Spanish Univision copy (cos 0.72) is its own event.
+
+Further guards: only sources that count toward the verdict can name the event (its headline feeds the
+title rule and the LLM veto) or lead its receipts; a model-attached article starts to count only if a later
+corroboration search confirms it by keyword; near-empty texts are not embedded. One slow or malformed
+model reply costs that call only; the LLM or embedder is switched off, with a printed notice, when Ollama
+is unreachable or fails three times in a row.
 
 ## Agent team bus
 
@@ -175,8 +186,13 @@ cached in `archive_snapshots`, no API key) plus title + description. With no sna
 title + description are used; today's snippets/markdown/highlights are dropped. The Wayback
 lookup is made only for signals with severity >= 3 and for corroboration hits. The basis is
 stored in `signals.score_basis` / `event_sources.score_basis` (`snapshot` | `title_desc` |
-`live`). Re-score stored data with `python3 scripts/scout.py retag --as-of-replay`.
-Live mode is unchanged.
+`live`). `python3 scripts/scout.py retag` re-scores stored data and keeps replayed signals on
+as-of text (`--as-of-replay` forces it for every signal). Live mode is unchanged.
+
+Receipt quotes follow the same rule: for a source scored on `snapshot` or `title_desc`, the quote
+is a sentence from that as-of text (else the headline), never today's markdown, snippets or
+highlights; `verify.py requote` keeps it that way. The LLM veto reads the opening of the as-of
+text plus the passages where the claim's keywords matched, not just the first 1500 characters.
 
 ## Market Signals & Hedging desk
 

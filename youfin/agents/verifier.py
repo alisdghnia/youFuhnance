@@ -16,15 +16,17 @@ import json
 import os
 import re
 import sqlite3
+import sys
 import time
 from dataclasses import dataclass
 from datetime import date, timedelta
+from urllib.parse import urlparse
 
 from ..embed import Embedder, cosine, enabled as embed_enabled
 from ..risk_tags import RULES
 from ..sources import publisher, tier
 from ..llm import Judge, ensure_schema, log_decision
-from ..youcom import YouClient
+from ..youcom import YouClient, YouComError
 from .scout import JUNK_DOMAINS, _pub_date, matches, score, score_as_of
 
 TAG_PRIORITY = [
@@ -64,6 +66,7 @@ LLM_MAX_PER_SIGNAL = 2     # bound LLM merge checks per new signal
 # syndicated copies 0.88-1.00, paraphrases ~0.87-0.88. Re-calibrate if YOUFIN_EMBED_MODEL changes.
 EMBED_HIGH = float(os.environ.get("YOUFIN_EMBED_HIGH", "0.94"))
 EMBED_LOW = float(os.environ.get("YOUFIN_EMBED_LOW", "0.87"))
+MIN_EMBED_CHARS = 20       # title + description shorter than this is not embedded
 
 
 def primary_tag(tags: list[str]) -> str:
@@ -88,11 +91,15 @@ def jaccard(a: set[str], b: set[str]) -> float:
 PAYWALL_DOMAINS = ("ft.com", "wsj.com", "bloomberg.com")
 # Navigation, consent and sign-up boilerplate that is never a supporting sentence.
 BOILERPLATE = re.compile(
-    r"skip to|accessibility help|sign in|log in|subscribe|subscription|newsletter|"
+    # Phrases, not bare words: "subscription line", "risk premium" and "unlock value" are
+    # ordinary credit vocabulary and must stay quotable.
+    r"skip to|accessibility help|\bsign in\b|\blog in\b|\bsubscribe\b|subscribers? only|"
+    r"subscription (required|only|plans?|offers?)|subscribe to|newsletter|"
     r"cookie|privacy policy|terms of (use|service)|all rights reserved|"
-    r"javascript|advertisement|read more|follow us|share this|menu|"
+    r"javascript|advertisement|read more|follow us|share this|\bmenu\b|"
     r"create (an )?account|already a (subscriber|member)|register (now|for free)|"
-    r"free trial|setze dich|sign up|unlock|premium|paywall|click here",
+    r"free trial|setze dich|\bsign up\b|unlock (this|the|full|unlimited|more|all)|"
+    r"premium (content|article|access|subscri\w+|members?)|paywall|click here",
     re.I,
 )
 
@@ -125,8 +132,17 @@ def _clean_markdown(text: str) -> str:
 
 def _sentence_with(text: str, terms: list[str], limit: int) -> str | None:
     for s in re.split(r"(?<=[.!?])\s+", _clean_markdown(text)):
-        if len(s) >= 40 and any(t in s.lower() for t in terms) and not is_junk(s[:limit]):
-            return s.strip()[:limit]
+        if len(s) < 40:
+            continue
+        at = min((i for i in (s.lower().find(t) for t in terms) if i >= 0), default=-1)
+        if at < 0:
+            continue
+        s = s.strip()
+        if at > limit - 40:  # run-on text: the quote must still contain the supporting term
+            cut = max(0, at - limit // 2)
+            s = s[s.find(" ", cut) + 1 if cut else 0:]
+        if not is_junk(s[:limit]):
+            return s[:limit]
     return None
 
 
@@ -151,11 +167,49 @@ def best_quote(full: str, short: str, terms: list[str], limit: int = 300,
     return "" if is_junk(c) else c
 
 
+def asof_quote(text: str, title: str, terms: list[str], limit: int = 300) -> str:
+    """Replay receipt: a sentence from the text that existed on the replay date (Wayback
+    snapshot and/or title + description), else the headline. Never today's page text."""
+    title = (title or "").strip()
+    # Search the body first: glued to the description, the headline is not a sentence.
+    body = text[len(title):] if title and text.startswith(title) else text
+    q = _sentence_with(body, terms, limit)
+    if q:
+        return q
+    t = re.split(r"\s[|\-–]\s(?=[^|\-–]{0,40}$)", title)[0].strip()
+    return t[:limit] if len(t) >= 15 else ""
+
+
+def evidence_window(text: str, tag: str, limit: int = 1500, head: int = 400,
+                    span: int = 500) -> str:
+    """What the LLM veto reads when the text is longer than its budget: the opening plus the
+    passages where this claim's keywords matched. The keyword hit that made the article a
+    candidate can sit anywhere in a 20k-character snapshot; showing the model only the first
+    1500 characters made it veto real corroboration it never saw."""
+    if len(text) <= limit:
+        return text
+    hits = sorted({m.start() for p in RULES.get(tag, (0, []))[1]
+                   for m in re.finditer(p, text, re.I) if m.start() >= head})
+    parts, used, last = [text[:head]], head, head
+    for pos in hits:
+        a, b = max(last, pos - span // 2), min(len(text), pos + span // 2)
+        room = limit - used - 5
+        if room <= 40:
+            break
+        if b <= a:
+            continue
+        seg = text[a:b][:room]
+        parts.append(seg)
+        used, last = used + len(seg) + 5, b
+    return " ... ".join(parts) if len(parts) > 1 else text[:limit]
+
+
 def receipt_sources(conn: sqlite3.Connection, event_id: int, n: int = 1) -> list[sqlite3.Row]:
-    """Sources to show as receipts: clean quotes from open sources first, best tier first."""
+    """Sources to show as receipts: sources that count toward the verdict first, then clean
+    quotes from open sources, best tier first."""
     rows = conn.execute("SELECT * FROM event_sources WHERE event_id=? ORDER BY tier, published_at",
                         (event_id,)).fetchall()
-    rows.sort(key=lambda r: (is_junk(r["quote"]), is_paywalled(r["domain"])))  # stable
+    rows.sort(key=lambda r: (not counted(r), is_junk(r["quote"]), is_paywalled(r["domain"])))
     return rows[:n]
 
 
@@ -220,6 +274,7 @@ class Verifier:
             Embedder(conn) if use_embed and embed_enabled() else None)
         ensure_schema(conn)
         self.stats = {"cluster_s": 0.0, "same_event_calls": 0, "same_event_live": 0}
+        self.errors: list[str] = []   # corroboration searches that failed (retried next day)
         self.client = client
         self.min_severity = min_severity
         self.verify_min_severity = verify_min_severity
@@ -244,11 +299,37 @@ class Verifier:
         a = self.conn.execute("SELECT highlights FROM articles WHERE url=?", (url,)).fetchone()
         return json.loads(a["highlights"] or "[]") if a else []
 
+    def _replay_text(self, url: str, basis: str | None, as_of: str | None = None) -> str:
+        """The text a replay-scored source was scored on: title + description, plus the
+        cached Wayback snapshot for basis 'snapshot' (the one for `as_of`, else the earliest
+        stored one, which can only be older). Cache only: no network."""
+        base = self._as_of_text(url)
+        if basis != "snapshot":
+            return base
+        try:
+            row = self.conn.execute(
+                "SELECT text FROM archive_snapshots WHERE url=? AND status='ok' "
+                "ORDER BY (as_of = ?) DESC, as_of LIMIT 1", (url, as_of or "")).fetchone()
+        except sqlite3.OperationalError:  # no archive cache in this DB
+            row = None
+        return f"{base} {row[0]}" if row and row[0] else base
+
+    def _quote(self, url: str, terms: list[str], basis: str | None,
+               as_of_text: str | None = None, as_of: str | None = None) -> str:
+        if basis in ("snapshot", "title_desc"):
+            # Replay: today's markdown / snippets / highlights did not exist on the replay
+            # date (and may describe later events), so they are never quoted.
+            a = self.conn.execute("SELECT title FROM articles WHERE url=?", (url,)).fetchone()
+            text = as_of_text if as_of_text is not None else self._replay_text(url, basis, as_of)
+            return asof_quote(text, a["title"] if a else "", terms)
+        short, full = self._article_text(url)
+        return best_quote(full, short, terms, highlights=self._highlights(url))
+
     def _add_source(self, event_id: int, url: str, domain: str, role: str,
                     published: str | None, terms: list[str], basis: str = "live",
-                    merge_basis: str | None = None) -> None:
-        short, full = self._article_text(url)
-        quote = best_quote(full, short, terms, highlights=self._highlights(url))
+                    merge_basis: str | None = None, as_of_text: str | None = None,
+                    as_of: str | None = None) -> None:
+        quote = self._quote(url, terms, basis, as_of_text, as_of)
         self.conn.execute(
             "INSERT OR IGNORE INTO event_sources (event_id, url, domain, publisher, tier, role, "
             "published_at, quote, score_basis, merge_basis) VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -265,17 +346,21 @@ class Verifier:
         # Name the event after its best source, not whichever article arrived first.
         # Dockets and filings are the best evidence but make poor headlines: rank them
         # after major press. If no readable title exists, use the receipt quote.
+        # Only sources that count may name the event: the headline feeds the title rule and
+        # the LLM veto, so a model-attached article must not be able to restate the claim.
+        only = "COALESCE(es.merge_basis, '') NOT IN (%s)" % ",".join("?" * len(NOT_COUNTED))
         best = self.conn.execute(
             "SELECT a.title FROM event_sources es JOIN articles a USING (url) "
-            "WHERE es.event_id=? AND length(a.title) >= 25 AND a.title NOT LIKE 'Case number%' "
+            f"WHERE es.event_id=? AND {only} AND length(a.title) >= 25 "
+            "AND a.title NOT LIKE 'Case number%' "
             "ORDER BY CASE es.tier WHEN 0 THEN 1.5 ELSE es.tier END, es.published_at LIMIT 1",
-            (event_id,)).fetchone()
+            (event_id, *NOT_COUNTED)).fetchone()
         if best:
             headline = best[0]
         else:
             src = self.conn.execute(
-                "SELECT domain, quote FROM event_sources WHERE event_id=? ORDER BY tier LIMIT 1",
-                (event_id,)).fetchone()
+                f"SELECT es.domain, es.quote FROM event_sources es WHERE es.event_id=? AND {only} "
+                "ORDER BY es.tier LIMIT 1", (event_id, *NOT_COUNTED)).fetchone()
             headline = f"[{src['domain']}] {src['quote'][:120]}" if src and src["quote"] else ev["headline"]
         self.conn.execute("UPDATE events SET headline=? WHERE id=?", (headline, event_id))
         alerted = ev["alerted_as_of"] or (as_of.isoformat() if level == "ALERT" else None)
@@ -301,11 +386,15 @@ class Verifier:
         members = {ev["id"]: [r[0] for r in self.conn.execute(
             "SELECT url FROM event_sources WHERE event_id=?", (ev["id"],))] for ev in events}
         urls = list(dict.fromkeys([url, *(u for us in members.values() for u in us)]))
-        vecs = self.embedder.embed([self._as_of_text(u) for u in urls])
+        texts = {u: self._as_of_text(u) for u in urls}
+        if len(texts[url]) < MIN_EMBED_CHARS:
+            return None  # nothing to compare: two near-empty texts would score cos ~1.0
+        urls = [u for u in urls if len(texts[u]) >= MIN_EMBED_CHARS]
+        vecs = self.embedder.embed([texts[u] for u in urls])
         if vecs is None:
             return None
         vec = dict(zip(urls, vecs))
-        return {eid: max((cosine(vec[url], vec[u]) for u in us), default=0.0)
+        return {eid: max((cosine(vec[url], vec[u]) for u in us if u in vec), default=0.0)
                 for eid, us in members.items()}
 
     def _log(self, as_of: date, s: sqlite3.Row, event_id: int | None, merged: bool,
@@ -451,7 +540,7 @@ class Verifier:
             self.conn.execute("UPDATE signals SET event_id=? WHERE id=?", (event_id, s["id"]))
             self._add_source(event_id, s["url"], s["domain"], "scout", s["published_at"],
                              json.loads(s["matched_terms"]), s["score_basis"] or "live",
-                             merge_basis)
+                             merge_basis, as_of=s["first_seen_as_of"])
             touched.add(event_id)
             n_clustered += 1
         for eid in touched:
@@ -480,8 +569,16 @@ class Verifier:
             start = date.fromisoformat(ev["first_published"]) - timedelta(days=CLUSTER_DAYS)
             freshness = f"{start.isoformat()}to{as_of.isoformat()}"
             query = f"{cp['name']} {TAG_QUERY.get(ev['primary_tag'], '')}".strip()
-            results = self.client.search(query, count=20, freshness=freshness,
-                                         exclude_domains=JUNK_DOMAINS, highlights=True)
+            try:
+                results = self.client.search(query, count=20, freshness=freshness,
+                                             exclude_domains=JUNK_DOMAINS, highlights=True)
+            except YouComError as e:
+                # One failed search must not abort the run or use up an attempt: the event
+                # stays due and is searched again on the next day inside its window.
+                self.errors.append(f"{as_of} event {ev['id']} {query!r}: {e}")
+                print(f"[verifier] WARNING corroboration search failed: {self.errors[-1]}",
+                      file=sys.stderr)
+                continue
             n_new = 0
             for r in results:
                 url = r.get("url")
@@ -493,7 +590,7 @@ class Verifier:
                                  *(r.get("snippets") or []), *hl])
                 if not matches(text, aliases, context):
                     continue
-                domain = re.sub(r"^www\.", "", re.sub(r"^https?://([^/]+).*", r"\1", url))
+                domain = urlparse(url).netloc.lower().removeprefix("www.")
                 basis = "live"
                 if mode == "replay":
                     # Score on the page as it was on as_of, not today's snippets.
@@ -509,8 +606,9 @@ class Verifier:
                 # corroboration on its own (a small model is too permissive to trust
                 # with upgrading a verdict).
                 if self.judge:
-                    res = self.judge.supports_claim(ev["primary_tag"], ev["headline"], text,
-                                                    as_of.isoformat(), subject=url)
+                    res = self.judge.supports_claim(
+                        ev["primary_tag"], ev["headline"],
+                        evidence_window(text, ev["primary_tag"]), as_of.isoformat(), subject=url)
                     if res is not None:
                         self.judge.annotate(
                             self.judge.last_decision, ev["id"],
@@ -523,12 +621,18 @@ class Verifier:
                     (url, r.get("title"), r.get("description"),
                      json.dumps(r.get("snippets") or []), r.get("page_age"), domain),
                 )
-                if hl:
+                if hl and mode != "replay":  # today's highlights are hindsight in a replay
                     self.conn.execute("UPDATE articles SET highlights=? WHERE url=?",
                                       (json.dumps(hl), url))
                 before = self.conn.total_changes
                 self._add_source(ev["id"], url, domain, "corroboration", pub.isoformat(), terms,
-                                 basis)
+                                 basis, as_of_text=text if mode == "replay" else None)
+                # Keyword-verified corroboration of an article a model had attached: it now
+                # counts, on the keyword evidence (the model still added nothing by itself).
+                self.conn.execute(
+                    "UPDATE event_sources SET merge_basis='corroboration' WHERE event_id=? AND "
+                    "url=? AND merge_basis IN (%s)" % ",".join("?" * len(NOT_COUNTED)),
+                    (ev["id"], url, *NOT_COUNTED))
                 n_new += self.conn.total_changes > before
             self._refresh(ev["id"], as_of)
             verdict = self.conn.execute("SELECT verdict FROM events WHERE id=?",
@@ -557,18 +661,27 @@ class Verifier:
                 best = receipt_sources(self.conn, ev["id"], 1)
                 if best and not is_junk(best[0]["quote"]) and not is_paywalled(best[0]["domain"]):
                     continue
+                if not self.conn.execute(
+                        "SELECT 1 FROM event_sources WHERE event_id=? AND "
+                        "COALESCE(score_basis, 'live') = 'live'", (ev["id"],)).fetchone():
+                    continue  # replay event: today's highlights must not become its receipts
                 cp = self._cp(ev["counterparty_id"])
                 start = date.fromisoformat(ev["first_published"]) - timedelta(days=CLUSTER_DAYS)
                 end = date.fromisoformat(ev["first_published"]) + timedelta(days=VERIFY_WINDOW_DAYS)
                 query = f"{cp['name']} {TAG_QUERY.get(ev['primary_tag'], '')}".strip()
-                results = self.client.search(query, count=20, highlights=True,
-                                             freshness=f"{start.isoformat()}to{end.isoformat()}",
-                                             exclude_domains=JUNK_DOMAINS)
+                try:
+                    results = self.client.search(
+                        query, count=20, highlights=True, exclude_domains=JUNK_DOMAINS,
+                        freshness=f"{start.isoformat()}to{end.isoformat()}")
+                except YouComError as e:
+                    self.errors.append(f"requote event {ev['id']}: {e}")
+                    continue
                 stats["searches"] += 1
                 for r in results:
                     hl = (r.get("contents") or {}).get("highlights") or []
-                    if hl and self.conn.execute("SELECT 1 FROM event_sources WHERE url=?",
-                                                (r["url"],)).fetchone():
+                    if hl and r.get("url") and self.conn.execute(
+                            "SELECT 1 FROM event_sources WHERE url=? AND "
+                            "COALESCE(score_basis, 'live') = 'live'", (r["url"],)).fetchone():
                         self.conn.execute("UPDATE articles SET highlights=? WHERE url=?",
                                           (json.dumps(hl), r["url"]))
                         stats["stored_highlights"] += 1
@@ -578,12 +691,12 @@ class Verifier:
     def _requote_all(self) -> int:
         changed = 0
         rows = self.conn.execute(
-            "SELECT es.event_id, es.url, es.quote, s.matched_terms FROM event_sources es "
+            "SELECT es.event_id, es.url, es.quote, es.score_basis, s.matched_terms, "
+            "s.first_seen_as_of FROM event_sources es "
             "LEFT JOIN signals s ON s.url=es.url AND s.event_id=es.event_id").fetchall()
         for r in rows:
             terms = json.loads(r["matched_terms"]) if r["matched_terms"] else self._terms(r)
-            short, full = self._article_text(r["url"])
-            quote = best_quote(full, short, terms, highlights=self._highlights(r["url"]))
+            quote = self._quote(r["url"], terms, r["score_basis"], as_of=r["first_seen_as_of"])
             if quote != (r["quote"] or ""):
                 self.conn.execute("UPDATE event_sources SET quote=? WHERE event_id=? AND url=?",
                                   (quote, r["event_id"], r["url"]))
@@ -593,9 +706,11 @@ class Verifier:
 
     def _terms(self, row: sqlite3.Row) -> list[str]:
         """Corroboration sources have no signal row: re-score the stored text."""
-        short, full = self._article_text(row["url"])
         domain = self.conn.execute("SELECT domain FROM articles WHERE url=?",
                                    (row["url"],)).fetchone()[0] or ""
+        if row["score_basis"] in ("snapshot", "title_desc"):
+            return score(self._replay_text(row["url"], row["score_basis"]), domain)[2]
+        short, full = self._article_text(row["url"])
         return score(" ".join([short, *self._highlights(row["url"])]), domain)[2]
 
     def step(self, as_of: date, mode: str = "replay"):
@@ -604,8 +719,15 @@ class Verifier:
             return n, self.verify(as_of, mode)
         before = self._event_state()
         msgs = self.bus.poll("verifier")
-        n = self.cluster(as_of, [m["payload"]["id"] for m in msgs if m["topic"] == "signals"],
-                         mode)
+        ids = [m["payload"]["id"] for m in msgs if m["topic"] == "signals"]
+        # poll() has already moved the cursor. If an earlier step died after polling, its
+        # signals were announced but never clustered and would never be seen again: pick up
+        # every announced signal that is still without an event.
+        ids += [r[0] for r in self.conn.execute(
+            "SELECT s.id FROM signals s WHERE s.event_id IS NULL AND s.severity >= ? "
+            "AND s.first_seen_as_of <= ? AND EXISTS (SELECT 1 FROM bus_messages m "
+            "WHERE m.id = 'signal-' || s.id)", (self.min_severity, as_of.isoformat()))]
+        n = self.cluster(as_of, sorted(set(ids)), mode)
         verified = self.verify(as_of, mode)
         self._publish_changes(before, as_of, n, len(msgs))
         return n, verified
