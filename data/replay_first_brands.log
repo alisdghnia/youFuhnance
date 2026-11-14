@@ -1,0 +1,140 @@
+[replay as_of 2025-07-01] new signals:  0  max severity: info
+[replay as_of 2025-07-08] new signals:  0  max severity: info
+[replay as_of 2025-07-15] new signals:  0  max severity: info
+[replay as_of 2025-07-22] new signals:  1  max severity: elevated
+      2025-07-22 [elevated] Fitch Affirms First Brands' IDR at 'B+'; Rates Proposed 1L Loan ... (fitchratings.com)
+[replay as_of 2025-07-29] new signals:  1  max severity: info
+[replay as_of 2025-08-05] new signals:  0  max severity: info
+[replay as_of 2025-08-12] new signals:  0  max severity: info
+[replay as_of 2025-08-19] new signals:  0  max severity: info
+[replay as_of 2025-08-26] new signals:  1  max severity: info
+[replay as_of 2025-09-02] new signals:  3  max severity: info
+[replay as_of 2025-09-03] new signals:  4  max severity: info
+[replay as_of 2025-09-04] new signals:  0  max severity: info
+[replay as_of 2025-09-05] new signals:  0  max severity: info
+[replay as_of 2025-09-06] new signals:  0  max severity: info
+[replay as_of 2025-09-07] new signals:  0  max severity: info
+[replay as_of 2025-09-08] new signals:  0  max severity: info
+[replay as_of 2025-09-09] new signals:  0  max severity: info
+[replay as_of 2025-09-10] new signals:  0  max severity: info
+[replay as_of 2025-09-11] new signals:  0  max severity: info
+[replay as_of 2025-09-12] new signals: 17  max severity: high <-- ALERT
+      2025-09-12 [high] Apollo Global's High-Stakes Bet on First Brands Group: Credit Risk ... (ainvest.com)
+      2025-09-12 [elevated] First Brands Loan Slumps After Report on Apollo Short Position ... (bloomberg.com)
+      2025-09-12 [elevated] Apollo's Year-Long CDS Short on First Brands Puts Private-Credit ... (stockinvest.us)
+      2025-09-12 [elevated] Apollo Has Short Position Against Debt of First Brands Group: FT (news.bloomberglaw.com)
+      2025-09-12 [elevated] Apollo Takes Short Position Against First Brands Group Debt (ainvest.com)
+      2025-09-12 [elevated] First Brands Loan Slumps After Report on Apollo Short Position (news.bloomberglaw.com)
+      2025-09-12 [elevated] Market Chatter: Apollo Takes Short Position Against First Brands ... (news.futunn.com)
+      2025-09-12 [elevated] Apollo Takes Short Position Against First Brands Group Debt | ... (marketscreener.com)
+      2025-09-12 [elevated] Apollo Bets Against First Brands Debt Amid Financial Concerns (indiapodcast.com)
+[replay as_of 2025-09-13] new signals:  0  max severity: info
+[replay as_of 2025-09-14] new signals:  0  max severity: info
+[replay as_of 2025-09-15] new signals:  0  max severity: info
+[replay as_of 2025-09-16] new signals:  0  max severity: info
+[replay as_of 2025-09-17] new signals:  0  max severity: info
+[replay as_of 2025-09-18] new signals:  2  max severity: CRITICAL <-- ALERT
+      2025-09-18 [CRITICAL] First Brands Group seeks options for $6 billion debt | Irene García ... (linkedin.com)
+[replay as_of 2025-09-19] new signals:  7  max severity: elevated
+      2025-09-19 [elevated] First Brands debt plunges as worries mount over US car parts group (ft.com)
+      2025-09-19 [elevated] First Brands debt plunges as worries mount over US car parts group (biztoc.com)
+      2025-09-19 [elevated] AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options (news.bloomberglaw.com)
+[replay as_of 2025-09-20] new signals:  6  max severity: CRITICAL <-- ALERT
+      2025-09-20 [CRITICAL] First Brands creditors face billions in paper losses as company’s ... (ainvest.com)
+      2025-09-20 [CRITICAL] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ... (livemint.com)
+      2025-09-20 [high] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ... (bloomberg.com)
+      2025-09-20 [high] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge (news.bloomberglaw.com)
+      2025-09-20 [high] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ... (livemint.com)
+[replay as_of 2025-09-21] new signals:  1  max severity: CRITICAL <-- ALERT
+      2025-09-21 [CRITICAL] Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ... (financialpost.com)
+[replay as_of 2025-09-22] new signals: 14  max severity: CRITICAL <-- ALERT
+      2025-09-22 [CRITICAL] First Brands Mulls Restructuring Options Including Bankruptcy - ... (bloomberg.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (investing.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (in.investing.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (ng.investing.com)
+      2025-09-22 [CRITICAL] First Brands Revamps Strategy: Overcoming Financial Challenges ... (fullavantenews.com)
+      2025-09-22 [CRITICAL] Navigating the Crossroads: First Brands' Restructuring Risks and ... (ainvest.com)
+      2025-09-22 [CRITICAL] First Brands Considers Restructuring, Including Bankruptcy in 2025 ... (franetic.com)
+      2025-09-22 [CRITICAL] First Brands Mulls Restructuring Options Including Bankruptcy (news.bloomberglaw.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (ca.investing.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (uk.investing.com)
+      2025-09-22 [CRITICAL] First Brands Group prepares for possible bankruptcy filing - WSJ ... (au.investing.com)
+      2025-09-20 [elevated] First Brands Goes Silent as Loan Crisis Deepens in 2025 - Franetic ... (franetic.com)
+[replay as_of 2025-09-23] new signals:  5  max severity: CRITICAL <-- ALERT
+      2025-09-23 [CRITICAL] AMERICAS DISTRESS DAILY: First Brands Mulls Potential Bankruptcy (news.bloomberglaw.com)
+      2025-09-23 [CRITICAL] First Brands’ Slide From Refinancing to the Brink of Bankruptcy ... (bloomberg.com)
+      2025-09-23 [CRITICAL] First Brands’ lenders race to rescue car parts supplier as debt ... (ft.com)
+      2025-09-23 [CRITICAL] First Brands’ One-Month Slide Toward Bankruptcy: The Brink (news.bloomberglaw.com)
+[replay as_of 2025-09-24] new signals:  1  max severity: CRITICAL <-- ALERT
+      2025-09-24 [CRITICAL] First Brands’ lenders race to rescue car parts supplier as debt ... (ft.com)
+[replay as_of 2025-09-25] new signals: 12  max severity: CRITICAL <-- ALERT
+      2025-09-25 [CRITICAL] Auto parts maker First Brands Group to file for bankruptcy | Crain's ... (crainsdetroit.com)
+      2025-09-25 [CRITICAL] Fram and Trico owner First Brands preps for Chapter 11 bankruptcy ... (autonews.com)
+      2025-09-25 [CRITICAL] First Brands rushes toward bankruptcy with $6 billion debt burden ... (investing.com)
+      2025-09-25 [CRITICAL] First Brands’ Loans Drop After Finance Units File Bankruptcy ... (bloomberg.com)
+      2025-09-25 [CRITICAL] Units Linked to First Brands File for Bankruptcy - TT (ttnews.com)
+      2025-09-25 [CRITICAL] First Brands-Linked Financing Units File for Bankruptcy | Company ... (livemint.com)
+      2025-09-25 [CRITICAL] Goldman Has ‘Serious Doubts’ First Brands Will Avoid Bankruptcy ... (livemint.com)
+      2025-09-25 [CRITICAL] First Brands Group's Financial Crisis: Causes and Consequences ... (linkedin.com)
+      2025-09-25 [CRITICAL] First Brands factoring agreements a USD 2bn variable at play in ... (ionanalytics.com)
+      2025-09-25 [CRITICAL] US auto parts supplier files Chapter 11 bankruptcy; 'billions in ... (thestreet.com)
+      2025-09-25 [CRITICAL] Lenders scramble to rescue Malaysian-born Patrick James’ First ... (malaymail.com)
+      2025-09-25 [CRITICAL] Lenders scramble to rescue Malaysian-born Patrick James’ First ... (malaysia.news.yahoo.com)
+
+API usage: {'search': 99, 'contents_pages': 36}  (~$0.49 search + $0.036 contents)
+
+=== Timeline: first_brands (54 signals, severity >= 2) ===
+2025-07-22 T- 65d [elevated] credit                       Fitch Affirms First Brands' IDR at 'B+'; Rates Proposed 1L Loan ...  (fitchratings.com)
+2025-09-12 T- 13d [    high] lender_disclosure,credit     Apollo Global's High-Stakes Bet on First Brands Group: Credit Risk ...  (ainvest.com)
+2025-09-12 T- 13d [elevated] credit                       First Brands Loan Slumps After Report on Apollo Short Position ...  (bloomberg.com)
+2025-09-12 T- 13d [elevated] credit                       Apollo's Year-Long CDS Short on First Brands Puts Private-Credit ...  (stockinvest.us)
+2025-09-12 T- 13d [elevated] credit                       Apollo Has Short Position Against Debt of First Brands Group: FT  (news.bloomberglaw.com)
+2025-09-12 T- 13d [elevated] credit                       Apollo Takes Short Position Against First Brands Group Debt  (ainvest.com)
+2025-09-12 T- 13d [elevated] credit                       First Brands Loan Slumps After Report on Apollo Short Position  (news.bloomberglaw.com)
+2025-09-12 T- 13d [elevated] credit                       Market Chatter: Apollo Takes Short Position Against First Brands ...  (news.futunn.com)
+2025-09-12 T- 13d [elevated] credit                       Apollo Takes Short Position Against First Brands Group Debt | ...  (marketscreener.com)
+2025-09-12 T- 13d [elevated] credit                       Apollo Bets Against First Brands Debt Amid Financial Concerns  (indiapodcast.com)
+2025-09-18 T-  7d [CRITICAL] insolvency,fraud,credit,funding First Brands Group seeks options for $6 billion debt | Irene García ...  (linkedin.com)
+2025-09-18 T-  7d [   watch] funding                      First Brands Group Explores Financing Options with Advisers Amid ...  (ainvest.com)
+2025-09-19 T-  6d [elevated] credit                       First Brands debt plunges as worries mount over US car parts group  (ft.com)
+2025-09-19 T-  6d [elevated] credit                       First Brands debt plunges as worries mount over US car parts group  (biztoc.com)
+2025-09-19 T-  6d [elevated] credit                       AMERICAS DISTRESS DAILY: First Brands Is Weighing Debt Options  (news.bloomberglaw.com)
+2025-09-19 T-  6d [   watch] funding                      First Brands, Creditors Explore Financing Options With Advisers ...  (bloomberg.com)
+2025-09-19 T-  6d [   watch] funding                      First Brands, Lenders Explore Funding Options With Advisers (1)  (news.bloomberglaw.com)
+2025-09-19 T-  6d [   watch] funding                      First Brands, Creditors Explore Financing Options With Advisers ...  (bloomberg.com)
+2025-09-20 T-  5d [CRITICAL] lender_action,funding        First Brands creditors face billions in paper losses as company’s ...  (ainvest.com)
+2025-09-20 T-  5d [CRITICAL] lender_action,operations,credit,funding Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ...  (livemint.com)
+2025-09-20 T-  5d [    high] operations,credit,funding    Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ...  (bloomberg.com)
+2025-09-20 T-  5d [    high] operations,credit,funding    Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge  (news.bloomberglaw.com)
+2025-09-20 T-  5d [    high] operations,credit,funding    Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ...  (livemint.com)
+2025-09-20 T-  5d [elevated] credit,funding               First Brands Goes Silent as Loan Crisis Deepens in 2025 - Franetic ...  (franetic.com)
+2025-09-20 T-  5d [   watch] funding                      Newsminimalist  (newsminimalist.com)
+2025-09-21 T-  4d [CRITICAL] lender_action,operations,credit,funding Troubled Auto-Parts Firm First Brands Goes Quiet as Loans Plunge ...  (financialpost.com)
+2025-09-22 T-  3d [CRITICAL] insolvency,credit,funding    First Brands Mulls Restructuring Options Including Bankruptcy - ...  (bloomberg.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (investing.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (in.investing.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (ng.investing.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Revamps Strategy: Overcoming Financial Challenges ...  (fullavantenews.com)
+2025-09-22 T-  3d [CRITICAL] insolvency,operations,credit,funding Navigating the Crossroads: First Brands' Restructuring Risks and ...  (ainvest.com)
+2025-09-22 T-  3d [CRITICAL] insolvency,credit,funding    First Brands Considers Restructuring, Including Bankruptcy in 2025 ...  (franetic.com)
+2025-09-22 T-  3d [CRITICAL] insolvency,credit,funding    First Brands Mulls Restructuring Options Including Bankruptcy  (news.bloomberglaw.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (ca.investing.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (uk.investing.com)
+2025-09-22 T-  3d [CRITICAL] insolvency                   First Brands Group prepares for possible bankruptcy filing - WSJ ...  (au.investing.com)
+2025-09-23 T-  2d [CRITICAL] insolvency,credit,funding    AMERICAS DISTRESS DAILY: First Brands Mulls Potential Bankruptcy  (news.bloomberglaw.com)
+2025-09-23 T-  2d [CRITICAL] insolvency,funding           First Brands’ Slide From Refinancing to the Brink of Bankruptcy ...  (bloomberg.com)
+2025-09-23 T-  2d [CRITICAL] insolvency,credit,funding    First Brands’ lenders race to rescue car parts supplier as debt ...  (ft.com)
+2025-09-23 T-  2d [CRITICAL] insolvency,funding           First Brands’ One-Month Slide Toward Bankruptcy: The Brink  (news.bloomberglaw.com)
+2025-09-24 T-  1d [CRITICAL] insolvency,credit,funding    First Brands’ lenders race to rescue car parts supplier as debt ...  (ft.com)
+2025-09-25 T-  0d [CRITICAL] insolvency                   Auto parts maker First Brands Group to file for bankruptcy | Crain's ...  (crainsdetroit.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,credit,funding    Fram and Trico owner First Brands preps for Chapter 11 bankruptcy ...  (autonews.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,credit,funding    First Brands rushes toward bankruptcy with $6 billion debt burden ...  (investing.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,credit            First Brands’ Loans Drop After Finance Units File Bankruptcy ...  (bloomberg.com)
+2025-09-25 T-  0d [CRITICAL] insolvency                   Units Linked to First Brands File for Bankruptcy - TT  (ttnews.com)
+2025-09-25 T-  0d [CRITICAL] insolvency                   First Brands-Linked Financing Units File for Bankruptcy | Company ...  (livemint.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,credit,funding    Goldman Has ‘Serious Doubts’ First Brands Will Avoid Bankruptcy ...  (livemint.com)
+2025-09-25 T-  0d [CRITICAL] insolvency                   First Brands Group's Financial Crisis: Causes and Consequences ...  (linkedin.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,funding           First Brands factoring agreements a USD 2bn variable at play in ...  (ionanalytics.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,credit,funding    US auto parts supplier files Chapter 11 bankruptcy; 'billions in ...  (thestreet.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,funding           Lenders scramble to rescue Malaysian-born Patrick James’ First ...  (malaymail.com)
+2025-09-25 T-  0d [CRITICAL] insolvency,funding           Lenders scramble to rescue Malaysian-born Patrick James’ First ...  (malaysia.news.yahoo.com)
