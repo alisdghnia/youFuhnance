@@ -4,6 +4,7 @@ Examples:
   python scripts/verify.py replay --start 2025-08-25 --end 2025-09-10 --event tricolor=2025-09-10
   python scripts/verify.py report --counterparty tricolor --event tricolor=2025-09-10
   python scripts/verify.py live
+  python scripts/verify.py requote      # re-derive receipt quotes from stored data
   python scripts/verify.py reset        # drop events so a replay can be re-run
 """
 from __future__ import annotations
@@ -16,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from youfin.agents.verifier import Verifier  # noqa: E402
+from youfin.agents.verifier import Verifier, receipt_sources  # noqa: E402
 from youfin.db import connect  # noqa: E402
 from youfin.llm import SCHEMA_SQL  # noqa: E402
 from youfin.sources import TIER_NAMES  # noqa: E402
@@ -63,9 +64,7 @@ def report(conn, cps: list[str], events: dict[str, date], min_level: str, receip
             print(f"     {r['headline'][:110]}")
             if r["alerted_as_of"]:
                 print(f"     ALERT raised as of {r['alerted_as_of']} {lead(r['alerted_as_of'], ev_date)}")
-            srcs = conn.execute(
-                "SELECT * FROM event_sources WHERE event_id=? ORDER BY tier, published_at LIMIT ?",
-                (r["id"], receipts)).fetchall()
+            srcs = receipt_sources(conn, r["id"], receipts)
             for d in conn.execute("SELECT * FROM llm_decisions WHERE event_id=? ORDER BY id",
                                   (r["id"],)).fetchall():
                 print(f"       ~ LLM {d['kind']} -> {'yes' if d['answer'] else 'no'} "
@@ -77,7 +76,7 @@ def report(conn, cps: list[str], events: dict[str, date], min_level: str, receip
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["replay", "live", "report", "reset"])
+    ap.add_argument("mode", choices=["replay", "live", "report", "reset", "requote"])
     ap.add_argument("--start", type=date.fromisoformat)
     ap.add_argument("--end", type=date.fromisoformat)
     ap.add_argument("--counterparty", action="append")
@@ -99,6 +98,12 @@ def main() -> None:
                 conn.execute(f"DELETE FROM {t}")
         print("events cleared")
         return
+
+    if args.mode == "requote":
+        v = Verifier(conn, YouClient())
+        stats = v.requote()
+        print(f"requote: {stats}")
+        print(f"API usage: {v.client.calls} (~${v.client.calls['search'] * 0.005:.2f})")
 
     if args.mode in ("replay", "live"):
         client = YouClient()
