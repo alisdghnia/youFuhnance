@@ -1,6 +1,7 @@
 """Market Signals & Hedging desk.
 
-For each verified ALERT on the bus it answers, as of the alert date and with no look-ahead:
+For each verified ALERT on the bus it answers, with no look-ahead (alerts are dated, not
+timed, so only sessions that closed BEFORE the alert date are used; see market.price_cutoff):
   1. which liquid public proxies carry this counterparty's risk (data/portfolio.json),
   2. is the market ALREADY pricing it: per-proxy features, BOCPD change-point probability,
      basket Markov-switching P(stress), and an open / closing / closed action window,
@@ -11,6 +12,7 @@ It writes one `market_assessments` row per alert and publishes a compact message
 from __future__ import annotations
 
 import json
+import logging
 import math
 import sqlite3
 from dataclasses import dataclass, field
@@ -21,6 +23,10 @@ import pandas as pd
 
 from .. import market as M
 from .. import regime as R
+
+log = logging.getLogger("youfin.market")
+
+STALE_DAYS = 5   # calendar days between the price cut-off and the last bar before we warn
 
 DISCLAIMER = ("Analysis for the deal team, not investment advice. Any hedge needs compliance "
               "sign-off first: as a lender we may hold MNPI on the borrower and its lenders.")
@@ -38,7 +44,7 @@ CREATE TABLE IF NOT EXISTS market_assessments (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     counterparty_id TEXT NOT NULL,
     as_of           TEXT NOT NULL,      -- assessment date (the alert date)
-    bar_date        TEXT,               -- last market close used (<= as_of)
+    bar_date        TEXT,               -- last market close used (< as_of unless after-close)
     event_id        INTEGER,            -- verified event that triggered it (NULL from CLI)
     trigger         TEXT NOT NULL,      -- bus message id, or 'cli'
     window          TEXT NOT NULL,      -- open | closing | closed
@@ -78,6 +84,8 @@ class Panel:
 def build_panel(conn: sqlite3.Connection, cp: str, end) -> Panel:
     end = _d(end)
     prox = M.proxies(cp)
+    if not prox:
+        raise ValueError(f"no market proxies configured for {cp} in portfolio.json")
     tickers = M.all_tickers(prox)
     M.ensure_prices(conn, tickers, end)
     prices = M.load_prices(conn, tickers, end)          # <= end: the no-look-ahead cut
@@ -87,9 +95,15 @@ def build_panel(conn: sqlite3.Connection, cp: str, end) -> Panel:
         f["bocpd_ar"] = R.bocpd_series(f["ar_z"])
         f["bocpd_vol"] = R.bocpd_series(f["vol_z"])
         pn.feats[p["ticker"]] = f
-    ars = pd.concat({p["ticker"]: pn.feats[p["ticker"]]["ar"] for p in prox
-                     if p["role"] != "market"}, axis=1)
-    b = pd.DataFrame({"ar": ars.mean(axis=1, skipna=True)})
+    # A proxy without bars (delisted, typo, failed download) must not poison the basket:
+    # its empty object-dtype column used to make the Markov fit fail for everyone.
+    members = {p["ticker"]: pn.feats[p["ticker"]]["ar"].astype(float) for p in prox
+               if p["role"] != "market" and len(pn.feats[p["ticker"]])}
+    if members:
+        ars = pd.concat(members, axis=1)
+        b = pd.DataFrame({"ar": ars.mean(axis=1, skipna=True).astype(float)})
+    else:
+        b = pd.DataFrame({"ar": pd.Series(dtype=float)})
     sd = b["ar"].rolling(M.WINDOW, min_periods=M.WINDOW).std().shift(1)
     b["z"] = b["ar"] / sd
     b["car5"] = b["ar"].rolling(5).sum()
@@ -111,6 +125,10 @@ def proxy_row(pn: Panel, p: dict, day: pd.Timestamp) -> dict:
     for k in ("close", "r1", "r3", "r5", "ar", "beta", "ar_z", "car5_z", "shock_z", "ar_vs_z",
               "vol_z", "rv_ratio", "dd20", "adv60_usd", "bocpd_ar", "bocpd_vol"):
         row[k] = _num(x.get(k), 2 if k == "adv60_usd" else 4)
+    if row["ar_z"] is None and row["car5_z"] is None:
+        # Too little history (or no benchmark bars) to say anything: not the same as "open".
+        row.update(label="n/a", drivers=["insufficient history"])
+        return row
     row["label"], row["drivers"] = R.classify_proxy(row)
     return row
 
@@ -163,27 +181,44 @@ def assess_day(pn: Panel, day: pd.Timestamp, ms: dict, as_of: date | None = None
               "z": _num(b["z"] if b is not None else None),
               "car5_z": _num(b["car5_z"] if b is not None else None),
               "bocpd": _num(b["bocpd"] if b is not None else None),
-              "members": [p["ticker"] for p in pn.prox if p["role"] != "market"],
+              "members": [p["ticker"] for p in pn.prox
+                          if p["role"] != "market" and len(pn.feats[p["ticker"]])],
               **{k: _num(v) for k, v in ms.items() if k in ("sd_calm_pct", "sd_stress_pct",
                                                              "mean_stress_pct")},
               "ms_bars": ms.get("n_bars"), "ms_error": ms.get("error")}
+    basket["stress_persistence"] = _num(ms.get("stress_persistence"))
     window, why = R.classify_overall(rows, basket["p_stress"], basket["car5_z"])
+    warn = [f"{r['ticker']}: {r['drivers'][0]}" for r in rows if r["label"] == "n/a"]
+    if ms.get("error"):
+        warn.append(f"basket Markov model unavailable: {ms['error']}")
     return {"counterparty": pn.cp, "as_of": (as_of or day.date()).isoformat(),
             "bar_date": day.date().isoformat(), "window": window, "window_drivers": why,
+            "data_warnings": warn,
             "basket": basket, "proxies": rows, "hedges": rank_hedges(rows),
             "thresholds": {"proxy": R.T, "overall": R.OVERALL}, "disclaimer": DISCLAIMER}
 
 
-def assess(conn: sqlite3.Connection, cp: str, as_of) -> dict:
-    """Full assessment as of `as_of` using only bars dated <= as_of."""
+def assess(conn: sqlite3.Connection, cp: str, as_of, after_close: bool = False) -> dict:
+    """Full assessment for an alert dated `as_of`.
+
+    Uses only sessions that closed before `as_of` (the alert's time of day is unknown, so
+    that day's close may be after it). after_close=True states the alert came after the
+    close of `as_of` and lets that session in."""
     as_of = _d(as_of)
-    pn = build_panel(conn, cp, as_of)
-    bar = M.last_bar(pn.prices, as_of)
+    cut = M.price_cutoff(as_of, after_close)
+    pn = build_panel(conn, cp, cut)
+    bar = M.last_bar(pn.prices, cut)
     if bar is None:
-        raise ValueError(f"no market data on or before {as_of}")
+        raise ValueError(f"no market data on or before {cut}")
     day = pd.Timestamp(bar)
     ms = R.markov_stress(pn.basket["ar"], day)
-    return assess_day(pn, day, ms, as_of)
+    a = assess_day(pn, day, ms, as_of)
+    a["price_rule"] = ("alert after the close: sessions dated <= as_of" if after_close else
+                       "alert time unknown: only sessions closed before as_of (dated < as_of)")
+    if (cut - bar).days > STALE_DAYS:
+        a["data_warnings"].insert(0, f"stale prices: last bar {bar} is {(cut - bar).days} days "
+                                     f"before the cut-off {cut}")
+    return a
 
 
 def save(conn: sqlite3.Connection, a: dict, trigger: str = "cli", event_id: int | None = None) -> int:
@@ -202,15 +237,18 @@ def save(conn: sqlite3.Connection, a: dict, trigger: str = "cli", event_id: int 
 def summary(a: dict) -> str:
     moving = [f"{r['ticker']}:{r['label']}" for r in a["proxies"] if r.get("label") not in ("open", "n/a")]
     ps = a["basket"]["p_stress"]
+    warn = f"; DATA WARNINGS: {len(a['data_warnings'])}" if a.get("data_warnings") else ""
     return (f"MARKET {a['counterparty']} as of {a['as_of']} (close {a['bar_date']}): window "
             f"{a['window'].upper()}; basket P(stress) {'n/a' if ps is None else f'{ps:.2f}'}; "
             f"moving: {', '.join(moving) or 'none'}; hedge candidates: "
-            f"{', '.join(h['ticker'] for h in a['hedges'][:3])} (analysis, not advice)")
+            f"{', '.join(h['ticker'] for h in a['hedges'][:3]) or 'none'}{warn} "
+            f"(analysis, not advice)")
 
 
 # ----------------------------------------------------------------- study
 def study(conn: sqlite3.Connection, cp: str, start, end) -> tuple[pd.DataFrame, pd.DataFrame, Panel]:
-    """Daily assessments over [start, end]. Features/BOCPD are causal (computed once on bars
+    """Daily assessments over [start, end], each row AT THAT DAY'S CLOSE (what an alert
+    dated the next day would see). Features/BOCPD are causal (computed once on bars
     <= end, each value uses only earlier bars); the Markov model is refit on every day's
     expanding window exactly as `assess` does (no warm start, so both give the same numbers)."""
     start, end = _d(start), _d(end)
@@ -227,13 +265,19 @@ def study(conn: sqlite3.Connection, cp: str, start, end) -> tuple[pd.DataFrame, 
         orows.append({"date": day, "window": a["window"], "drivers": "; ".join(a["window_drivers"]),
                       **{f"basket_{k}": v for k, v in a["basket"].items()
                          if k in ("p_stress", "ar", "z", "car5_z", "bocpd")}})
+    if not orows:
+        raise ValueError(f"no trading days with market data in {start}..{end}")
     return pd.DataFrame(prows), pd.DataFrame(orows).set_index("date"), pn
 
 
 def lead_sessions(days: pd.DatetimeIndex, alert, brk) -> int | None:
     """Trading sessions from the alert to the break (break session counted; negative = the
-    market broke before our alert). Sunday alert + Wednesday break = 3."""
-    if brk is None:
+    market broke before our alert). Sunday alert + Wednesday break = 3.
+
+    Deliberately the conservative convention for OUR lead: an alert dated on a trading day
+    is treated as arriving after that day's close, so a break on the alert day itself is
+    lead 0 (no lead claimed), and the next session is +1."""
+    if brk is None or alert is None:
         return None
     a = days[days <= pd.Timestamp(_d(alert))]
     if not len(a):
@@ -277,6 +321,7 @@ class MarketDesk:
         self.conn = conn
         self.bus = bus
         self._cache: dict[tuple[str, str], dict] = {}   # (cp, as_of) -> assessment
+        self.errors: list[str] = []                     # alerts that could not be assessed
         conn.executescript(SCHEMA)
         M.init(conn)
         if bus is not None:
@@ -291,7 +336,8 @@ class MarketDesk:
     def handle_alert(self, payload: dict, trigger: str) -> dict | None:
         cp, as_of = payload.get("counterparty"), payload.get("as_of")
         try:
-            M.proxies(cp)
+            if not cp or not as_of or not M.proxies(cp):
+                return None  # nothing to assess: unknown counterparty or no proxies listed
         except KeyError:
             return None
         key = (cp, str(as_of))
@@ -305,6 +351,7 @@ class MarketDesk:
             "kind": "market_assessment", "assessment_id": aid, "counterparty": cp,
             "event_id": payload.get("event_id"), "as_of": a["as_of"], "bar_date": a["bar_date"],
             "window": a["window"], "window_drivers": a["window_drivers"][:3],
+            "data_warnings": a.get("data_warnings", [])[:3],
             "basket_p_stress": a["basket"]["p_stress"],
             "moving": [{"ticker": r["ticker"], "label": r["label"], "car5_z": r.get("car5_z")}
                        for r in a["proxies"] if r.get("label") not in ("open", "n/a")],
@@ -322,8 +369,15 @@ class MarketDesk:
             return []
         out = []
         for m in self.bus.poll(self.name):
-            if m["topic"] == "alerts":
+            if m["topic"] != "alerts":
+                continue
+            try:
                 r = self.handle_alert(m["payload"], m["id"])
-                if r:
-                    out.append(r)
+            except Exception as e:  # market data / model trouble must never stop the team
+                self.errors.append(f"{m['id']}: {type(e).__name__}: {e}")
+                log.warning("market desk could not assess %s: %s: %s", m["id"],
+                            type(e).__name__, e)
+                continue
+            if r:
+                out.append(r)
         return out

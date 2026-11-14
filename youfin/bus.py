@@ -29,6 +29,7 @@ MAX_TEXT = 1500
 AGENT_TASKS = {
     "scout": "YouFin Scout: sweeps the web for credit-risk news on portfolio counterparties",
     "verifier": "YouFin Verifier: clusters signals into events, corroborates them, raises alerts",
+    "market": "YouFin Market desk: checks whether public proxies already price an alert",
 }
 
 SCHEMA = """
@@ -171,7 +172,8 @@ class Bus:
         t0 = time.time()
         try:
             sid = self._session(sender)
-            self._publish_board(sid, msg_id, topic, sender, payload)
+            if not self._publish_board(sid, msg_id, topic, sender, payload):
+                return  # already on the board from an earlier run: keep that mirror record
         except MessageRejected as e:  # skip this message only; mirror stays on
             log.warning("board rejected %s: %s", msg_id, e)
             self.conn.execute(
@@ -190,10 +192,10 @@ class Bus:
             (msg_id, topic, round(time.time() - t0, 2), self._variant, self._last_error))
         self.conn.commit()
 
-    def _publish_board(self, sid: str, msg_id: str, topic: str, sender: str, payload: dict) -> None:
+    def _publish_board(self, sid: str, msg_id: str, topic: str, sender: str, payload: dict) -> bool:
         """Try text layouts from richest to plainest for EVERY message (the board rejected some
         bodies with INVALID_USAGE, cause unknown); a fallback for one message must not strip
-        the readable summary from later ones."""
+        the readable summary from later ones. Returns False if the post id already existed."""
         board_id = re.sub(r"[^A-Za-z0-9.-]", "-", msg_id)
         variants = render_variants(topic, sender, payload)
         last: Exception | None = None
@@ -204,10 +206,10 @@ class Bus:
                           "--topic", BOARD_PREFIX + topic, "--text", variants[i])
                 self._variant = i
                 self._last_error = str(last)[:500] if last else None
-                return
+                return True
             except RuntimeError as e:
                 if "BOARD_CONFLICT" in str(e):
-                    return                       # this post id is already on the board
+                    return False                 # this post id is already on the board
                 if "INVALID_USAGE" not in str(e):
                     raise
                 last = e

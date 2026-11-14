@@ -16,12 +16,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from youfin.agents.market import MarketDesk  # noqa: E402
 from youfin.agents.scout import Scout  # noqa: E402
 from youfin.agents.verifier import Verifier  # noqa: E402
 from youfin.bus import Bus  # noqa: E402
 from youfin.db import connect  # noqa: E402
 from youfin.llm import SCHEMA_SQL  # noqa: E402
+
+
+def make_market_desk(conn, bus):
+    """The market desk is optional: without its numeric stack (pandas, scipy, statsmodels)
+    or on any start-up failure, Scout + Verifier still run."""
+    try:
+        from youfin.agents.market import MarketDesk
+        desk = MarketDesk(conn, bus=bus)     # subscribes to `alerts`, publishes `actions`
+        desk.reset()                         # fresh market_assessments for this replay
+        return desk
+    except Exception as e:
+        print(f"[team] market desk disabled: {type(e).__name__}: {e}")
+        return None
 
 
 def replay(args, conn) -> None:
@@ -30,8 +42,7 @@ def replay(args, conn) -> None:
     cps = args.counterparty or None
     scout = Scout(conn, bus=bus)
     verifier = Verifier(conn, bus=bus)   # subscribes to `signals`
-    market = MarketDesk(conn, bus=bus)   # subscribes to `alerts`, publishes `actions`
-    market.reset()                       # fresh market_assessments for this replay
+    market = make_market_desk(conn, bus)
     print(f"bus backend: {'mirror' if bus.mirror else 'local'}")
     days = [args.start + timedelta(n) for n in range((args.end - args.start).days + 1)]
     for i, d in enumerate(days):
@@ -41,7 +52,8 @@ def replay(args, conn) -> None:
         else:
             scout.sweep(d, mode="replay", counterparty_ids=cps)
         verifier.step(d, "replay")
-        market.step(d)
+        if market is not None:
+            market.step(d)               # never raises: failed alerts land in market.errors
         msgs = bus.transcript[mark:]
         if not msgs:
             continue
@@ -56,16 +68,22 @@ def replay(args, conn) -> None:
         for m in msgs:
             if m["topic"] != "signals":
                 print(f"  {m['sender']:<8} -> {m['topic']:<7}: {m['payload'].get('summary', '')[:110]}")
-    print_alerts(conn, cps)
+    print_alerts(conn, cps, args.start, args.end)
     print_actions(bus)
+    for e in (market.errors if market is not None else []):
+        print(f"  market desk could not assess {e}")
+    client = getattr(verifier, "client", None)
+    if client is not None:  # the Verifier's corroboration searches are billed even with --from-db
+        print(f"\nYou.com usage (verifier): {client.calls} (~${client.calls['search'] * 0.005:.2f})")
     if bus.mirror or bus.mirror_error or bus.backend == "mirror":
         print(f"\nmirror: {bus.mirror_stats()}" + (f"  (disabled: {bus.mirror_error})" if bus.mirror_error else ""))
 
 
-def print_alerts(conn, cps) -> None:
-    print("\nfirst verified ALERT per counterparty:")
+def print_alerts(conn, cps, start, end) -> None:
+    print(f"\nfirst verified ALERT per counterparty raised in this replay ({start}..{end}):")
     for r in conn.execute("SELECT counterparty_id, MIN(alerted_as_of) a FROM events "
-                          "WHERE alerted_as_of IS NOT NULL GROUP BY counterparty_id"):
+                          "WHERE alerted_as_of BETWEEN ? AND ? GROUP BY counterparty_id",
+                          (start.isoformat(), end.isoformat())):
         if not cps or r[0] in cps:
             print(f"  {r[0]}: {r['a']}")
 
@@ -99,11 +117,14 @@ def main() -> None:
     r = sub.add_parser("replay")
     r.add_argument("--start", type=date.fromisoformat, required=True)
     r.add_argument("--end", type=date.fromisoformat, required=True)
-    r.add_argument("--from-db", action="store_true", help="re-emit stored signals, no You.com search")
+    r.add_argument("--from-db", action="store_true", help="Scout re-emits stored signals (no Scout searches); the Verifier may "
+                        "still run billed You.com corroboration searches")
     r.add_argument("--counterparty", action="append")
     sub.add_parser("status")
     sub.add_parser("leave")
     args = ap.parse_args()
+    if args.cmd == "replay" and args.start > args.end:
+        ap.error("--start is after --end")
     conn = connect()
     conn.executescript(SCHEMA_SQL)
     if args.cmd == "replay":

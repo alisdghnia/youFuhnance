@@ -1,9 +1,13 @@
 """Daily market data for liquid public proxies, cached in SQLite, plus trailing features.
 
-No look-ahead: every public function takes an as-of date D and works only on bars dated
-<= D (an alert raised on a weekend therefore uses Friday's close). All rolling statistics
-are computed on windows that END at the bar they describe; the estimation windows for
-abnormal returns and volume end the bar BEFORE it.
+No look-ahead: every public function takes a cut-off date and works only on bars dated
+<= that date. Which bar an ALERT may see is decided by `price_cutoff`: alerts carry a date
+but no time of day, so by default only sessions that closed BEFORE the alert date are used
+(a Tuesday alert sees Monday's close, a weekend alert Friday's); the alert day's own close
+is used only when the caller states the alert came after that close. The cache never holds
+a session that has not finished (see `ensure_prices`). All rolling statistics are computed
+on windows that END at the bar they describe; the estimation windows for abnormal returns
+and volume end the bar BEFORE it.
 
 Features per proxy and bar t (WINDOW = 60 bars):
   r1, r3, r5      simple returns over 1/3/5 bars (adjusted close)
@@ -22,7 +26,8 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -51,7 +56,23 @@ def init(conn: sqlite3.Connection) -> None:
 
 
 def _d(x) -> date:
+    if isinstance(x, datetime):
+        return x.date()
     return x if isinstance(x, date) else date.fromisoformat(str(x)[:10])
+
+
+def price_cutoff(as_of, after_close: bool = False) -> date:
+    """Last bar date an assessment dated `as_of` may use.
+
+    An alert is dated, not timed. If it fired at 10:00, that day's 16:00 close is the
+    future, so the default is the previous session: bars dated < as_of. Pass
+    after_close=True only when the alert is known to have come after that day's close."""
+    return _d(as_of) if after_close else _d(as_of) - timedelta(days=1)
+
+
+def _last_complete_session_date() -> date:
+    """Bars dated up to yesterday (New York time) are final; today's may be mid-session."""
+    return datetime.now(ZoneInfo("America/New_York")).date() - timedelta(days=1)
 
 
 # ------------------------------------------------------------------ portfolio
@@ -75,9 +96,16 @@ def all_tickers(prox: list[dict]) -> list[str]:
 
 # ---------------------------------------------------------------------- cache
 def ensure_prices(conn: sqlite3.Connection, tickers: list[str], end: date | str) -> None:
-    """Download (yfinance) any ticker whose cache does not cover HIST_START..end."""
+    """Download (yfinance) any ticker whose cache does not cover HIST_START..end.
+
+    Only finished sessions are stored: a bar for a session still trading would be cached
+    as that day's "close" and never corrected. `market_fetch.end` is the date the cache is
+    complete THROUGH (not the last bar), so weekends, holidays and delisted tickers do not
+    trigger a download on every call. Never raises: on any download problem the cached
+    bars are used and callers report missing/stale data."""
     init(conn)
-    end = min(_d(end), date.today() - timedelta(days=1))
+    complete = _last_complete_session_date()
+    end = min(_d(end), complete)
     need = []
     for t in tickers:
         r = conn.execute("SELECT start, end FROM market_fetch WHERE ticker=?", (t,)).fetchone()
@@ -85,30 +113,40 @@ def ensure_prices(conn: sqlite3.Connection, tickers: list[str], end: date | str)
             need.append(t)
     if not need:
         return
-    import yfinance as yf  # imported lazily: cached runs need no network
-
-    fetch_end = date.today() + timedelta(days=1)          # yfinance `end` is exclusive
+    fetch_end = complete + timedelta(days=1)              # yfinance `end` is exclusive
     log.info("downloading %s %s..%s", need, HIST_START, fetch_end)
-    df = yf.download(need, start=HIST_START.isoformat(), end=fetch_end.isoformat(),
-                     auto_adjust=False, actions=False, progress=False, group_by="ticker",
-                     threads=True)
+    try:
+        import yfinance as yf  # imported lazily: cached runs need no network
+
+        df = yf.download(need, start=HIST_START.isoformat(), end=fetch_end.isoformat(),
+                         auto_adjust=False, actions=False, progress=False, group_by="ticker",
+                         threads=True)
+    except Exception as e:  # no network / rate limit / yfinance missing: keep the cache
+        log.warning("price download failed for %s (%s: %s); using cached bars",
+                    need, type(e).__name__, e)
+        return
+    if df is None or df.empty:
+        log.warning("price download returned nothing for %s; using cached bars", need)
+        return
     for t in need:
         try:
             sub = df[t] if isinstance(df.columns, pd.MultiIndex) else df
-        except KeyError:
-            log.warning("no data for %s", t)
+            sub = sub.dropna(subset=["Close"])
+            sub = sub[[ts.date() <= complete for ts in sub.index]]   # drop an unfinished session
+            adj = "Adj Close" if "Adj Close" in sub.columns else "Close"
+            rows = [(t, idx.date().isoformat(), _f(r["Open"]), _f(r["High"]), _f(r["Low"]),
+                     _f(r["Close"]), _f(r[adj]), _f(r["Volume"]))
+                    for idx, r in sub.iterrows()]
+        except (KeyError, AttributeError, TypeError, ValueError) as e:
+            log.warning("no usable data for %s (%s)", t, type(e).__name__)
             continue
-        sub = sub.dropna(subset=["Close"])
-        if sub.empty:
-            log.warning("no data for %s", t)
+        if not rows:
+            log.warning("no data for %s (delisted or unknown symbol?)", t)
             continue
-        rows = [(t, idx.date().isoformat(), _f(r["Open"]), _f(r["High"]), _f(r["Low"]),
-                 _f(r["Close"]), _f(r["Adj Close"]), _f(r["Volume"]))
-                for idx, r in sub.iterrows()]
         with conn:
             conn.executemany("INSERT OR REPLACE INTO market_prices VALUES (?,?,?,?,?,?,?,?)", rows)
             conn.execute("INSERT OR REPLACE INTO market_fetch (ticker, start, end) VALUES (?,?,?)",
-                         (t, HIST_START.isoformat(), rows[-1][1]))
+                         (t, HIST_START.isoformat(), complete.isoformat()))
 
 
 def _f(x) -> float | None:
